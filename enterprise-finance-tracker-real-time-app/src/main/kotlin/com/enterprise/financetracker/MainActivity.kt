@@ -7,19 +7,22 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.enterprise.financetracker.core.concurrency.StandardDispatcherProvider
-import com.enterprise.financetracker.data.repository.InMemoryReactiveTransactionRepository
-import com.enterprise.financetracker.data.repository.LiveTickerPortfolioRepository
-import com.enterprise.financetracker.domain.model.*
+import com.enterprise.financetracker.data.datasource.InMemoryTransactionLocalDataSource
+import com.enterprise.financetracker.data.repository.ExpenseRepositoryImpl
+import com.enterprise.financetracker.data.repository.PortfolioRepositoryImpl
+import com.enterprise.financetracker.domain.model.TransactionId
+import com.enterprise.financetracker.domain.usecase.*
+import com.enterprise.financetracker.ui.mapper.toUiModel
+import com.enterprise.financetracker.ui.model.TransactionUiModel
 import com.enterprise.financetracker.ui.screens.*
 import com.enterprise.financetracker.ui.theme.EnterpriseFinanceTheme
 import com.enterprise.financetracker.ui.viewmodels.DashboardViewModel
-import com.enterprise.financetracker.ui.viewmodels.TransactionListViewModel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import com.enterprise.financetracker.ui.viewmodels.TransactionListIntent
+import com.enterprise.financetracker.ui.viewmodels.TransactionListMviViewModel
 
 /**
- * Launcher Activity rendering the reactive Jetpack Compose UI powered by Coroutines & Flow.
- * (Phase 2, Phase 4 & Stage 4)
+ * Launcher Activity rendering the Clean Architecture + UDF UI layer.
+ * (Phase 5 & Stage 5)
  */
 class MainActivity : ComponentActivity() {
 
@@ -27,16 +30,37 @@ class MainActivity : ComponentActivity() {
         private const val TAG = "MainActivity"
     }
 
-    private val dispatchers = StandardDispatcherProvider()
-    private val transactionRepository = InMemoryReactiveTransactionRepository(dispatchers)
-    private val portfolioRepository = LiveTickerPortfolioRepository(dispatchers)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.i(TAG, "onCreate: Initializing reactive Coroutines & Flow UI engine")
+        Log.i(TAG, "onCreate: Initializing Clean Architecture pipeline (DataSource -> Repository -> UseCases -> ViewModels)")
 
-        val dashboardViewModel = DashboardViewModel(transactionRepository, portfolioRepository, dispatchers)
-        val transactionListViewModel = TransactionListViewModel(transactionRepository, dispatchers)
+        // 1. Data Layer
+        val dispatchers = StandardDispatcherProvider()
+        val localDataSource = InMemoryTransactionLocalDataSource()
+        val expenseRepository = ExpenseRepositoryImpl(localDataSource, dispatchers)
+        val portfolioRepository = PortfolioRepositoryImpl(dispatchers)
+
+        // 2. Domain Layer (Use Cases)
+        val getTransactionsUseCase = GetTransactionsUseCase(expenseRepository)
+        val getTransactionDetailUseCase = GetTransactionDetailUseCase(expenseRepository)
+        val addTransactionUseCase = AddTransactionUseCase(expenseRepository)
+        val deleteTransactionUseCase = DeleteTransactionUseCase(expenseRepository)
+        val getPortfolioSummaryUseCase = GetPortfolioSummaryUseCase(portfolioRepository)
+        val filterTransactionsUseCase = FilterTransactionsUseCase()
+
+        // 3. Presentation Layer (ViewModels)
+        val dashboardViewModel = DashboardViewModel(
+            getTransactionsUseCase = getTransactionsUseCase,
+            getPortfolioSummaryUseCase = getPortfolioSummaryUseCase,
+            dispatchers = dispatchers
+        )
+
+        val transactionListMviViewModel = TransactionListMviViewModel(
+            getTransactionsUseCase = getTransactionsUseCase,
+            filterTransactionsUseCase = filterTransactionsUseCase,
+            deleteTransactionUseCase = deleteTransactionUseCase,
+            dispatchers = dispatchers
+        )
 
         setContent {
             EnterpriseFinanceTheme {
@@ -54,34 +78,37 @@ class MainActivity : ComponentActivity() {
                             viewModel = dashboardViewModel,
                             onNavigateToTransactions = { currentScreen = AppScreen.TRANSACTION_LIST },
                             onNavigateToTransactionDetail = { id ->
-                                selectedTransactionId = id.value
+                                selectedTransactionId = id
                                 currentScreen = AppScreen.TRANSACTION_DETAIL
                             }
                         )
                     }
                     AppScreen.TRANSACTION_LIST -> {
                         TransactionListRoute(
-                            viewModel = transactionListViewModel,
+                            viewModel = transactionListMviViewModel,
                             onNavigateBack = { currentScreen = AppScreen.DASHBOARD },
                             onNavigateToDetail = { id ->
-                                selectedTransactionId = id.value
+                                selectedTransactionId = id
                                 currentScreen = AppScreen.TRANSACTION_DETAIL
                             }
                         )
                     }
                     AppScreen.TRANSACTION_DETAIL -> {
-                        var transaction by remember { mutableStateOf<Transaction?>(null) }
+                        var transactionUiModel by remember { mutableStateOf<TransactionUiModel?>(null) }
                         LaunchedEffect(selectedTransactionId) {
                             if (selectedTransactionId != null) {
-                                transaction = transactionRepository.getTransactionById(TransactionId(selectedTransactionId!!))
+                                val result = getTransactionDetailUseCase(TransactionId(selectedTransactionId!!))
+                                if (result is com.enterprise.financetracker.domain.model.FinancialResult.Success) {
+                                    transactionUiModel = result.value.toUiModel()
+                                }
                             }
                         }
 
                         TransactionDetailRoute(
-                            transaction = transaction,
+                            transaction = transactionUiModel,
                             onNavigateBack = { currentScreen = AppScreen.TRANSACTION_LIST },
-                            onDeleteClick = { tx ->
-                                transactionListViewModel.deleteTransaction(tx.id)
+                            onDeleteClick = { id ->
+                                transactionListMviViewModel.processIntent(TransactionListIntent.DeleteTransaction(id))
                                 currentScreen = AppScreen.TRANSACTION_LIST
                             }
                         )

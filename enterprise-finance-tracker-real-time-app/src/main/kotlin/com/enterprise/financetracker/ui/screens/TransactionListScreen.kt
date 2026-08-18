@@ -13,18 +13,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.enterprise.financetracker.domain.model.*
 import com.enterprise.financetracker.ui.components.EmptyStateWidget
 import com.enterprise.financetracker.ui.components.TransactionCard
+import com.enterprise.financetracker.ui.model.TransactionUiModel
+import com.enterprise.financetracker.ui.viewmodels.TransactionListIntent
+import com.enterprise.financetracker.ui.viewmodels.TransactionListMviViewModel
 import com.enterprise.financetracker.ui.viewmodels.TransactionListUiState
-import com.enterprise.financetracker.ui.viewmodels.TransactionListViewModel
 
-// Layer 1: Route
+// Layer 1: Route (MVI Intent Dispatcher)
 @Composable
 fun TransactionListRoute(
-    viewModel: TransactionListViewModel,
+    viewModel: TransactionListMviViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToDetail: (TransactionId) -> Unit,
+    onNavigateToDetail: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,32 +59,38 @@ fun TransactionListRoute(
                 )
             }
         }
-        is TransactionListUiState.Success -> {
+        is TransactionListUiState.Content -> {
             TransactionListScreen(
                 transactions = state.filteredTransactions,
                 searchQuery = state.searchQuery,
                 selectedFilter = state.selectedFilter,
-                onSearchQueryChange = viewModel::onSearchQueryChanged,
-                onFilterSelect = viewModel::onFilterSelected,
+                onIntent = viewModel::processIntent,
                 onNavigateBack = onNavigateBack,
                 onTransactionClick = onNavigateToDetail,
                 modifier = modifier
             )
         }
+        is TransactionListUiState.Error -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+            }
+        }
     }
 }
 
-// Layer 2: Stateless Screen
+// Layer 2: Stateless Screen (MVI event emitter)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionListScreen(
-    transactions: List<Transaction>,
+    transactions: List<TransactionUiModel>,
     searchQuery: String,
     selectedFilter: String,
-    onSearchQueryChange: (String) -> Unit,
-    onFilterSelect: (String) -> Unit,
+    onIntent: (TransactionListIntent) -> Unit,
     onNavigateBack: () -> Unit,
-    onTransactionClick: (TransactionId) -> Unit,
+    onTransactionClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -108,7 +115,7 @@ fun TransactionListScreen(
             // Search Bar
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = onSearchQueryChange,
+                onValueChange = { onIntent(TransactionListIntent.SearchQueryChanged(it)) },
                 label = { Text("Search transactions...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
@@ -126,22 +133,22 @@ fun TransactionListScreen(
             ) {
                 FilterChip(
                     selected = selectedFilter == "ALL",
-                    onClick = { onFilterSelect("ALL") },
+                    onClick = { onIntent(TransactionListIntent.FilterSelected("ALL")) },
                     label = { Text("All") }
                 )
                 FilterChip(
                     selected = selectedFilter == "EXPENSE",
-                    onClick = { onFilterSelect("EXPENSE") },
+                    onClick = { onIntent(TransactionListIntent.FilterSelected("EXPENSE")) },
                     label = { Text("Expenses") }
                 )
                 FilterChip(
                     selected = selectedFilter == "INCOME",
-                    onClick = { onFilterSelect("INCOME") },
+                    onClick = { onIntent(TransactionListIntent.FilterSelected("INCOME")) },
                     label = { Text("Income") }
                 )
                 FilterChip(
                     selected = selectedFilter == "TRANSFER",
-                    onClick = { onFilterSelect("TRANSFER") },
+                    onClick = { onIntent(TransactionListIntent.FilterSelected("TRANSFER")) },
                     label = { Text("Transfers") }
                 )
             }
@@ -158,7 +165,7 @@ fun TransactionListScreen(
                 ) {
                     items(
                         items = transactions,
-                        key = { it.id.value } // Mandatory stable key
+                        key = { it.id } // Mandatory stable key
                     ) { transaction ->
                         TransactionCard(
                             transaction = transaction,

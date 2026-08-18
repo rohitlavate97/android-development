@@ -15,19 +15,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.enterprise.financetracker.domain.model.*
 import com.enterprise.financetracker.ui.components.EmptyStateWidget
 import com.enterprise.financetracker.ui.components.HoldingCard
 import com.enterprise.financetracker.ui.components.TransactionCard
+import com.enterprise.financetracker.ui.model.PortfolioUiModel
+import com.enterprise.financetracker.ui.model.TransactionUiModel
 import com.enterprise.financetracker.ui.viewmodels.DashboardUiState
 import com.enterprise.financetracker.ui.viewmodels.DashboardViewModel
 
-// Layer 1: Route (Collects StateFlow via collectAsStateWithLifecycle)
+// Layer 1: Route
 @Composable
 fun DashboardRoute(
     viewModel: DashboardViewModel,
     onNavigateToTransactions: () -> Unit,
-    onNavigateToTransactionDetail: (TransactionId) -> Unit,
+    onNavigateToTransactionDetail: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -41,10 +42,8 @@ fun DashboardRoute(
                 CircularProgressIndicator()
             }
         }
-        is DashboardUiState.Success -> {
+        is DashboardUiState.Content -> {
             DashboardScreen(
-                netWorth = state.totalNetWorth,
-                cashBalance = state.cashBalance,
                 portfolio = state.portfolio,
                 recentTransactions = state.recentTransactions,
                 onViewAllTransactions = onNavigateToTransactions,
@@ -63,16 +62,14 @@ fun DashboardRoute(
     }
 }
 
-// Layer 2: Stateless Screen (100% Previewable & Testable)
+// Layer 2: Stateless Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    netWorth: Double,
-    cashBalance: Double,
-    portfolio: Portfolio,
-    recentTransactions: List<Transaction>,
+    portfolio: PortfolioUiModel,
+    recentTransactions: List<TransactionUiModel>,
     onViewAllTransactions: () -> Unit,
-    onTransactionClick: (TransactionId) -> Unit,
+    onTransactionClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -110,7 +107,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "$${String.format("%.2f", netWorth)}",
+                            text = portfolio.formattedNetWorth,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -122,11 +119,11 @@ fun DashboardScreen(
                         ) {
                             Column {
                                 Text("Liquid Cash", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                                Text("$${String.format("%.2f", cashBalance)}", fontWeight = FontWeight.SemiBold)
+                                Text(portfolio.formattedCash, fontWeight = FontWeight.SemiBold)
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("Investments (Live)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                                Text("$${String.format("%.2f", portfolio.totalPortfolioValue)}", fontWeight = FontWeight.SemiBold)
+                                Text(portfolio.formattedInvested, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -149,12 +146,9 @@ fun DashboardScreen(
             } else {
                 items(
                     items = portfolio.holdings,
-                    key = { it.ticker.value }
+                    key = { it.ticker }
                 ) { holding ->
-                    HoldingCard(
-                        holding = holding,
-                        allocationPercentage = portfolio.calculateAllocation(holding)
-                    )
+                    HoldingCard(holding = holding)
                 }
             }
 
@@ -182,7 +176,7 @@ fun DashboardScreen(
             } else {
                 items(
                     items = recentTransactions,
-                    key = { it.id.value } // Mandatory stable key
+                    key = { it.id }
                 ) { transaction ->
                     TransactionCard(
                         transaction = transaction,

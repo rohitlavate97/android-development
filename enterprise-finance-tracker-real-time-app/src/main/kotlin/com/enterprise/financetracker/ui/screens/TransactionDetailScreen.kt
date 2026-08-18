@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -12,22 +11,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.enterprise.financetracker.domain.model.Transaction
-import com.enterprise.financetracker.ui.components.AmountDisplay
 import com.enterprise.financetracker.ui.components.CategoryBadge
+import com.enterprise.financetracker.ui.model.TransactionUiModel
+import com.enterprise.financetracker.ui.theme.ExpenseRed
+import com.enterprise.financetracker.ui.theme.IncomeGreen
 
 // Layer 1: Route
 @Composable
 fun TransactionDetailRoute(
-    transaction: Transaction?,
+    transaction: TransactionUiModel?,
     onNavigateBack: () -> Unit,
-    onDeleteClick: (Transaction) -> Unit,
+    onDeleteClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     TransactionDetailScreen(
         transaction = transaction,
         onNavigateBack = onNavigateBack,
-        onDeleteClick = { if (transaction != null) onDeleteClick(transaction) },
+        onDeleteClick = { if (transaction != null) onDeleteClick(transaction.id) },
         modifier = modifier
     )
 }
@@ -36,7 +36,7 @@ fun TransactionDetailRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionDetailScreen(
-    transaction: Transaction?,
+    transaction: TransactionUiModel?,
     onNavigateBack: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -85,9 +85,11 @@ fun TransactionDetailScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                AmountDisplay(
-                    amount = transaction.amount,
-                    type = transaction.type
+                Text(
+                    text = transaction.formattedAmount,
+                    color = if (transaction.isPositive) IncomeGreen else ExpenseRed,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -98,16 +100,9 @@ fun TransactionDetailScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         DetailItem(label = "Category", value = transaction.category.name)
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        DetailItem(label = "Account", value = transaction.accountId.value)
+                        DetailItem(label = "Account", value = transaction.accountLabel)
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        DetailItem(
-                            label = "Type",
-                            value = when (transaction.type) {
-                                is com.enterprise.financetracker.domain.model.TransactionType.Income -> "Income"
-                                is com.enterprise.financetracker.domain.model.TransactionType.Expense -> "Expense"
-                                is com.enterprise.financetracker.domain.model.TransactionType.Transfer -> "Transfer"
-                            }
-                        )
+                        DetailItem(label = "Type", value = transaction.typeLabel)
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         DetailItem(label = "Recurring", value = if (transaction.isRecurring) "Yes (Monthly)" else "No")
                         if (!transaction.note.isNullOrBlank()) {

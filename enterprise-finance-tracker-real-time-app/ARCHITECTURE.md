@@ -2,23 +2,24 @@
 
 ## 1. High-Level Target Architecture
 
-The final architecture of **Enterprise Finance Tracker** follows Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)**:
+The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)**:
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │                        UI Layer                        │
 │   Jetpack Compose (Stateless Screens + Atomic Atoms)   │
 │                          ↓                             │
-│       ViewModel (StateFlow<UiState> + UI Intents)      │
+│   ViewModel (MVI State Machine / MVVM State Holder)    │
+│              (StateFlow<UiState> + UI Intents)         │
 └──────────────────────────┬─────────────────────────────┘
-                           │ (Inward Dependency)
+                           │ (Inward Dependency: calls UseCases)
 ┌──────────────────────────▼─────────────────────────────┐
 │                      Domain Layer                      │
 │        Use Cases (operator fun invoke())               │
 │   Domain Entities & Value Classes (Pure Kotlin)        │
 │          Repository Interfaces (Contracts)             │
 └──────────────────────────▲─────────────────────────────┘
-                           │ (Dependency Inversion)
+                           │ (Dependency Inversion: Implemented by Data)
 ┌──────────────────────────┴─────────────────────────────┐
 │                       Data Layer                       │
 │        Repository Implementations (SSOT)               │
@@ -29,23 +30,15 @@ The final architecture of **Enterprise Finance Tracker** follows Google's recomm
 
 ---
 
-## 2. Evolution Plan by Stage
+## 2. Why Each Layer Exists
 
-| Stage | Focus Area | Architectural Additions | What Is Intentionally Postponed |
+| Layer | Responsibility | Why It Exists | What It Must NOT Do |
 |---|---|---|---|
-| **Stage 1** | **Kotlin Foundation** | Pure Kotlin domain models, value classes, sealed types, invariant validations, unit tests. | No Android SDK, no UI, no networking, no database, no DI framework. |
-| **Stage 2** | **Platform Fundamentals** | Android Gradle, AndroidManifest, Application class, MainActivity, lifecycle logging. | No Compose UI, no async networks. |
-| **Stage 3** | **Jetpack Compose UI** | 3-Layer Screen architecture (`Route` → `Screen` → `Components`), Material 3 design tokens. | Static in-memory mock data (no coroutines/Room yet). |
-| **Stage 4** | **Concurrency & Flow** | Coroutine scopes, `StateFlow`, `WhileSubscribed(5000)`, `DispatcherProvider` injection. | In-memory reactive repository. |
-| **Stage 5** | **Clean Architecture** | Boundary mappers, Use Cases, MVVM & MVI patterns side-by-side. | No third-party network libraries yet. |
-| **Stage 6** | **Dependency Injection** | DI container graph, constructor injection, interface binding, swappable test fakes. | Real database or remote server. |
-| **Stage 7** | **Resilient Networking** | Retrofit, OkHttp, 401 token refresh mutex, 6-path failure resilience. | Room database (network-only data). |
-| **Stage 8** | **Offline-First Persistence** | Room DB, reactive Flow queries, DataStore preferences, SSOT sync engine. | Multi-module splitting. |
-| **Stage 9** | **Type-Safe Navigation** | Navigation-Compose with `@Serializable` routes, backstack management, deep links. | Modularization. |
-| **Stage 10** | **Testing Pyramid** | Turbine Flow testing, Compose UI semantics, JVM screenshot diffing. | Build optimizations. |
-| **Stage 11** | **Modularization** | Feature vs Core modules, `-api` / `-impl` split, Version Catalog. | Advanced APM profiling. |
-| **Stage 12** | **Production Quality** | StrictMode, Baseline Profiles, LeakCanary, RUM telemetry. | Store release pipelines. |
-| **Stage 13** | **Release & Incident Playbook** | Fastlane, Play Console tracks, Remote kill-switches, 4-level incident drill. | Final course graduation. |
+| **UI (Compose)** | Renders UI based on immutable state. Emits user interaction events (Intents). | Pure presentation. Decoupled from lifecycle and business logic. | Never perform business math, format currencies manually, or query repositories directly. |
+| **ViewModel** | State Holder & Reducer. Converts Domain streams to UI State models. | Survives configuration changes and acts as a bridge between UI and Domain. | Never reference `Context`, `View`, or `Activity`. Never contain SQLite/HTTP code. |
+| **UseCase (Domain)** | Single executable business action (`operator fun invoke()`). | Reusable, self-contained business logic testable in pure JVM without mocking frameworks. | Never import `android.*` SDK packages. Never depend on Data implementations. |
+| **Repository (Data)** | Single Source of Truth (SSOT). Coordinates local and remote data sources. | Hides where data comes from (database vs network vs cache) from the domain layer. | Never expose raw DTOs or database entities to the Domain. |
+| **DataSource (Data)** | Low-level data I/O (Room SQLite queries, Retrofit HTTP requests). | Direct database/network driver interaction. | Never implement domain business logic or cross-entity validations. |
 
 ---
 
@@ -56,10 +49,4 @@ To prevent architectural leaks, models are strictly separated:
 1. **Domain Models (`DomainModels.kt`)**: Pure Kotlin representations containing core business logic and invariant validation. Uses `@JvmInline value class` for identifiers.
 2. **Data Transfer Objects (`*Dto.kt`)**: Match remote backend JSON schemas. All fields nullable to defensively withstand malformed server payloads.
 3. **Database Entities (`*Entity.kt`)**: Room SQLite table definitions optimized for relational storage and foreign keys.
-4. **UI State Models (`*UiState.kt`)**: Immutable sealed hierarchies representing the 4 standard visual states (`Loading`, `Content`, `Empty`, `Error`).
-
----
-
-## 4. Current Stage 1 Scope
-
-In **Stage 1**, we strictly build the **Pure Kotlin Domain Model** without any Android dependencies. This ensures business rules (e.g., non-negative amounts, portfolio allocation sums, valid ticker symbols) are verified completely independently of the Android platform or UI frameworks.
+4. **UI State Models (`*UiState.kt` / `*UiModel.kt`)**: Immutable sealed hierarchies and pre-formatted strings representing the 4 standard visual states (`Loading`, `Content`, `Empty`, `Error`).

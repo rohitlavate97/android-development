@@ -15,13 +15,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.enterprise.financetracker.domain.model.*
+import com.enterprise.financetracker.ui.model.CategoryUiModel
+import com.enterprise.financetracker.ui.model.HoldingUiModel
+import com.enterprise.financetracker.ui.model.TransactionUiModel
 import com.enterprise.financetracker.ui.theme.IncomeGreen
 import com.enterprise.financetracker.ui.theme.ExpenseRed
-import com.enterprise.financetracker.ui.theme.TransferBlue
 
 @Composable
-fun CategoryBadge(category: Category, modifier: Modifier = Modifier) {
+fun CategoryBadge(category: CategoryUiModel, modifier: Modifier = Modifier) {
     val icon = when (category.iconName) {
         "restaurant" -> Icons.Default.Restaurant
         "payments" -> Icons.Default.Payments
@@ -55,25 +56,8 @@ fun CategoryBadge(category: Category, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AmountDisplay(amount: Double, type: TransactionType, modifier: Modifier = Modifier) {
-    val (prefix, color) = when (type) {
-        is TransactionType.Income -> "+$" to IncomeGreen
-        is TransactionType.Expense -> "-$" to ExpenseRed
-        is TransactionType.Transfer -> "$" to TransferBlue
-    }
-
-    Text(
-        text = "$prefix${String.format("%.2f", amount)}",
-        color = color,
-        fontWeight = FontWeight.Bold,
-        fontSize = 16.sp,
-        modifier = modifier
-    )
-}
-
-@Composable
 fun TransactionCard(
-    transaction: Transaction,
+    transaction: TransactionUiModel,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -101,20 +85,24 @@ fun TransactionCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "${transaction.category.name} • ${transaction.accountId.value}",
+                    text = "${transaction.category.name} • ${transaction.accountLabel}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp
                 )
             }
-            AmountDisplay(amount = transaction.amount, type = transaction.type)
+            Text(
+                text = transaction.formattedAmount,
+                color = if (transaction.isPositive) IncomeGreen else ExpenseRed,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
         }
     }
 }
 
 @Composable
 fun HoldingCard(
-    holding: InvestmentHolding,
-    allocationPercentage: Float,
+    holding: HoldingUiModel,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -138,7 +126,7 @@ fun HoldingCard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = holding.ticker.value.take(3),
+                    text = holding.ticker.take(3),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     fontSize = 14.sp
@@ -153,22 +141,20 @@ fun HoldingCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "${holding.shares} shares @ $${String.format("%.2f", holding.currentMarketPrice)} (${(allocationPercentage * 100).toInt()}%)",
+                    text = "${holding.sharesText} (${holding.allocationPercentageText})",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "$${String.format("%.2f", holding.currentMarketValue)}",
+                    text = holding.formattedMarketValue,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
-                val gainColor = if (holding.unrealizedProfitLoss >= 0) IncomeGreen else ExpenseRed
-                val gainPrefix = if (holding.unrealizedProfitLoss >= 0) "+" else ""
                 Text(
-                    text = "$gainPrefix${String.format("%.1f", holding.returnPercentage)}%",
-                    color = gainColor,
+                    text = holding.returnPercentageText,
+                    color = if (holding.isGain) IncomeGreen else ExpenseRed,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold
                 )

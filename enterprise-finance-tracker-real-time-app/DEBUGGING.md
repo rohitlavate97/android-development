@@ -132,3 +132,23 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 * 💡 **Hint 1**: What does `StandardTestDispatcher` do to coroutine virtual time?
 * 💡 **Hint 2**: Read ADR 010 on `DispatcherProvider` and Turbine `test {}`.
 * ✅ **Solution**: Inject `TestDispatcherProvider` and use `testDispatcher.scheduler.advanceUntilIdle()` or Turbine's `awaitItem()`.
+
+---
+
+## 🎯 Stage 5 Debugging Challenges (Clean Architecture)
+
+### Challenge 10: The Inward Dependency Rule Violation
+* **Symptom**: A developer imports `android.content.Context` inside a domain UseCase to format a localized currency string: `context.getString(R.string.currency_format, amount)`. Running the JVM unit test fails with `RuntimeException: Method getString not mocked`.
+* **Question for QA Engineer**: *Why did this unit test fail on JVM, and how does Clean Architecture prevent this?*
+* 💡 **Hint 1**: JVM unit tests do not run the Android OS runtime.
+* 💡 **Hint 2**: Where does formatting belong: Domain or UI Presentation Layer?
+* ✅ **Solution**: Move formatting to the UI Layer (`ui/mapper/UiMappers.kt`). The Domain layer must remain pure Kotlin with ZERO `android.*` imports.
+
+---
+
+### Challenge 11: Leaking DTO Nullability into Compose UI
+* **Symptom**: A backend API occasionally returns `null` for `category.icon_name`. The Compose UI crashes with `NullPointerException` when attempting to render `Icons.Default`.
+* **Question for QA Engineer**: *Why did a backend nullability bug crash the UI layer, and how do boundary mappers act as a firewall?*
+* 💡 **Hint 1**: Were DTOs passed directly into the Composable?
+* 💡 **Hint 2**: Read ADR 014 on defensive boundary mappers.
+* ✅ **Solution**: Never pass DTOs directly to UI. Convert DTOs in `data/mapper/` with defensive fallbacks (e.g. `iconName ?: "category"`).

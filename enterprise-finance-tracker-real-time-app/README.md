@@ -23,7 +23,7 @@ graph TD
     S01["Stage 1: Pure Kotlin Domain Foundation ✅"] --> S02["Stage 2: Android Platform & Build Fundamentals ✅"]
     S02 --> S03["Stage 3: Jetpack Compose UI (3-Layer Screens) ✅"]
     S03 --> S04["Stage 4: Coroutines, Flow & Concurrency Engine ✅"]
-    S04 --> S05["Stage 5: Clean Architecture (UDF, UseCases, SSOT)"]
+    S04 --> S05["Stage 5: Clean Architecture (UDF, UseCases, SSOT) ✅"]
     S05 --> S06["Stage 6: Dependency Injection (Koin & Hilt)"]
     S06 --> S07["Stage 7: Resilient Networking (Retrofit, 401 Mutex, 6-path errors)"]
     S07 --> S08["Stage 8: Offline-First Persistence (Room, DataStore)"]
@@ -37,6 +37,7 @@ graph TD
     style S02 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S03 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S04 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style S05 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---
@@ -52,10 +53,12 @@ graph TD
 
 ## 📍 Current Status
 
-- **Current Stage**: **Stage 4 Completed — Coroutines, Flow & Concurrency Engine**
+- **Current Stage**: **Stage 5 Completed — Clean Architecture & Unidirectional Data Flow (UDF)**
 - **Artifacts Built**:
-  - **Concurrency Engine**: `DispatcherProvider` interface, `StandardDispatcherProvider`, `safeSuspendCall` with `CancellationException` preservation.
-  - **Reactive Repositories**: `InMemoryReactiveTransactionRepository` (`Flow<List<Transaction>>`), `LiveTickerPortfolioRepository` (simulated real-time stock ticker stream with `currentCoroutineContext().isActive`).
-  - **ViewModels with StateFlow**: `DashboardViewModel` and `TransactionListViewModel` exposing `StateFlow<UiState>` using `SharingStarted.WhileSubscribed(5_000)`.
-  - **Compose Reactive Collection**: Screens consume state via `collectAsStateWithLifecycle()`.
-  - **Turbine Test Suite**: `TransactionFlowTest` and `SafeSuspendCallTest` validating reactive stream emissions and cancellation preservation.
+  - **Domain Use Cases**: `GetTransactionsUseCase`, `GetTransactionDetailUseCase`, `AddTransactionUseCase`, `DeleteTransactionUseCase`, `GetPortfolioSummaryUseCase`, `FilterTransactionsUseCase` with `operator fun invoke()`.
+  - **Data Layer Boundaries**: `DataTransferObjects` (DTOs), defensive `DataMappers`, `TransactionLocalDataSource`, `ExpenseRepositoryImpl`.
+  - **Presentation Models & Mappers**: `UiModels` (pre-formatted strings), `UiMappers` converting domain entities to UI models.
+  - **Dual Architectural Patterns**:
+    - **Dashboard**: Clean MVVM with `StateFlow<DashboardUiState>`.
+    - **Transactions**: Full MVI (Model-View-Intent) state machine with `TransactionListIntent` and `TransactionListMviViewModel`.
+  - **Unit Test Suite**: `UseCasesTest`, `DataMapperTest`, `TransactionListMviViewModelTest`.

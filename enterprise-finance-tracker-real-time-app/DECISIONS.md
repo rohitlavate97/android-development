@@ -110,7 +110,7 @@
 - **Context**: Using `SharingStarted.Eagerly` or `Lazily` keeps upstream cold Flows (e.g. database/location/live stock tickers) active indefinitely even when the app is in the background, wasting CPU and battery.
 - **Decision**: Always convert cold flows to `StateFlow` using `.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InitialState)`.
 - **Consequences & Tradeoffs**:
-  - *Pros*: Cancels upstream subscriptions 5 seconds after all UI collectors detach (allowing screen rotation buffer without restarting flows).
+  - *Pros*: Cancels upstream subscriptions 5 seconds after all UI collectors detach.
   - *Cons*: Requires understanding lifecycle-aware collection (`collectAsStateWithLifecycle()`).
 
 ---
@@ -118,8 +118,41 @@
 ## ADR 012: Strictly Preserve `CancellationException` in Catch Blocks
 
 - **Status**: Accepted
-- **Context**: Catching `java.lang.Exception` or using `runCatching` in suspend functions silently swallows `CancellationException`, which prevents Coroutines from cancelling parent jobs and causes memory leaks.
+- **Context**: Catching `java.lang.Exception` in suspend functions silently swallows `CancellationException`, which prevents Coroutines from cancelling parent jobs and causes memory leaks.
 - **Decision**: In all try-catch blocks in suspend functions, explicitly rethrow `CancellationException` before handling generic exceptions.
 - **Consequences & Tradeoffs**:
   - *Pros*: Clean structured concurrency and instant coroutine cancellation.
   - *Cons*: Requires developer discipline to avoid `try { ... } catch (e: Exception)` without rethrowing.
+
+---
+
+## ADR 013: Domain Use Cases with `operator fun invoke()`
+
+- **Status**: Accepted
+- **Context**: Letting ViewModels interact with God repositories directly leads to duplicate business rules (e.g. filtering logic, validation, currency conversions) across multiple screens.
+- **Decision**: Encapsulate distinct business actions into Single Responsibility Use Cases implementing `operator fun invoke()`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: 100% testable in isolation, callable as functions `getTransactionsUseCase()`, clean reuse.
+  - *Cons*: Increases class count in the domain package.
+
+---
+
+## ADR 014: Explicit Boundary Mappers at Every Layer
+
+- **Status**: Accepted
+- **Context**: Leaking database entity annotations (`@Entity`) or network annotations (`@SerialName`) into Domain or UI models tightly couples the UI to backend schemas.
+- **Decision**: Maintain dedicated DTOs, Entities, Domain Models, and UI Models with explicit mapping extension functions at every layer boundary.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Complete decoupling. Backend API changes never break Compose UI rendering.
+  - *Cons*: Requires writing mapping extension functions.
+
+---
+
+## ADR 015: Model-View-Intent (MVI) for Complex Interactive Screens
+
+- **Status**: Accepted
+- **Context**: Complex screens with multiple concurrent user inputs (search, filter chips, delete gestures) suffer from race conditions when using multiple independent `MutableStateFlow` fields in ViewModels.
+- **Decision**: Use the MVI pattern (`TransactionListIntent` → State Reducer → `TransactionListUiState`) for transactional screens, and Clean MVVM for read-heavy screens.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Single Source of Truth for screen state, 100% deterministic state transitions.
+  - *Cons*: Requires defining Intent sealed hierarchies.
