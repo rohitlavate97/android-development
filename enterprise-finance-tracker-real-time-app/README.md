@@ -21,7 +21,7 @@
 ```mermaid
 graph TD
     S01["Stage 1: Pure Kotlin Domain Foundation ✅"] --> S02["Stage 2: Android Platform & Build Fundamentals ✅"]
-    S02 --> S03["Stage 3: Jetpack Compose UI (3-Layer Screens)"]
+    S02 --> S03["Stage 3: Jetpack Compose UI (3-Layer Screens) ✅"]
     S03 --> S04["Stage 4: Coroutines, Flow & Concurrency Engine"]
     S04 --> S05["Stage 5: Clean Architecture (UDF, UseCases, SSOT)"]
     S05 --> S06["Stage 6: Dependency Injection (Koin & Hilt)"]
@@ -35,6 +35,7 @@ graph TD
 
     style S01 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S02 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style S03 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---
@@ -50,5 +51,9 @@ graph TD
 
 ## 📍 Current Status
 
-- **Current Stage**: **Stage 2 Completed — Android Platform Fundamentals**
-- **Artifacts Built**: Android Gradle build configuration, `libs.versions.toml`, `AndroidManifest.xml`, `EnterpriseFinanceApp` (with StrictMode), `MainActivity` (with lifecycle logging & `onSaveInstanceState`), XML resources (`strings.xml`, `colors.xml`, `themes.xml`), Pure Kotlin domain entities & tests.
+- **Current Stage**: **Stage 3 Completed — Jetpack Compose UI**
+- **Artifacts Built**:
+  - **3-Layer Screen Pattern**: `LoginRoute`/`LoginScreen`, `DashboardRoute`/`DashboardScreen`, `TransactionListRoute`/`TransactionListScreen`, `TransactionDetailRoute`/`TransactionDetailScreen`.
+  - **Material 3 Design System**: Theme, Color palette, Typography, atomic reusable widgets (`TransactionCard`, `HoldingCard`, `CategoryBadge`, `AmountDisplay`, `EmptyStateWidget`).
+  - **State Mechanics**: `rememberSaveable` state hoisting, stable `key = { it.id.value }` in `LazyColumn`.
+  - **Platform & Build**: AGP Compose plugin, Compose BOM, Android lifecycle activity integration.

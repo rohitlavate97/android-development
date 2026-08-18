@@ -66,3 +66,33 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 * 💡 **Hint 1**: Look at `<activity>` tags in `AndroidManifest.xml` that contain `<intent-filter>`.
 * 💡 **Hint 2**: Security: If an activity has an intent-filter, should other apps be able to launch it?
 * ✅ **Solution**: Explicitly set `android:exported="true"` on the launcher activity, and `android:exported="false"` on internal activities.
+
+---
+
+## 🎯 Stage 3 Debugging Challenges (Jetpack Compose)
+
+### Challenge 6: The Unstable LazyColumn Jitter
+* **Symptom**: A user scrolls down a list of 100 transactions. Whenever a new transaction is prepended, the scroll position jumps erratically and every visible item flashes/recomposes.
+* **Code Fragment**:
+  ```kotlin
+  LazyColumn {
+      items(transactions) { tx -> TransactionCard(tx) }
+  }
+  ```
+* **Question for QA Engineer**: *Why does Compose recompose every row when a new item is added at index 0 without a key?*
+* 💡 **Hint 1**: What is the default identity key used by `LazyColumn` if none is provided?
+* 💡 **Hint 2**: Index-based identity vs domain-based identity.
+* ✅ **Solution**: Supply stable domain key: `items(items = transactions, key = { it.id.value })`.
+
+---
+
+### Challenge 7: `remember` vs `rememberSaveable` on Rotation
+* **Symptom**: A user types a search query in `TransactionListScreen`. When rotating the device, the search query resets to empty string.
+* **Code Fragment**:
+  ```kotlin
+  var searchQuery by remember { mutableStateOf("") }
+  ```
+* **Question for QA Engineer**: *Why does `remember` survive recomposition but fail across Activity destruction / rotation?*
+* 💡 **Hint 1**: `remember` stores values in the Composition slot table in memory.
+* 💡 **Hint 2**: Read ADR 006 on saved state.
+* ✅ **Solution**: Use `rememberSaveable` which writes the state to the Android `SavedStateRegistry`.

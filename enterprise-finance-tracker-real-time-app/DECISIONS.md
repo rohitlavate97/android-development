@@ -64,4 +64,29 @@
 - **Decision**: All critical transient navigation and form state must be saved to the saved state bundle / `SavedStateHandle`.
 - **Consequences & Tradeoffs**:
   - *Pros*: 100% resilient across screen rotations and low-memory OS kills.
-  - *Cons*: Saved bundles are limited to ~500KB (TransactionTooLargeException if misuse).
+  - *Cons*: Saved bundles are limited to ~500KB (TransactionTooLargeException if misused).
+
+---
+
+## ADR 007: The 3-Layer Screen Architecture Pattern
+
+- **Status**: Accepted
+- **Context**: Mixing ViewModel state observation, navigation lambdas, and UI layout inside a single composable function creates tightly coupled, untestable, and un-previewable screens.
+- **Decision**: Structure every screen into 3 distinct layers:
+  1. **`*Route`**: Stateful, collects ViewModel/StateFlow, passes callbacks.
+  2. **`*Screen`**: 100% Stateless, accepts state data class and lambda event handlers.
+  3. **`*Components`**: Pure atomic reusable UI widgets.
+- **Consequences & Tradeoffs**:
+  - *Pros*: 100% previewable in Android Studio Previews, easy screenshot testing without mocking ViewModels.
+  - *Cons*: Requires creating two composable functions per screen file (`*Route` and `*Screen`).
+
+---
+
+## ADR 008: Mandatory Stable Keys for `LazyColumn` / `LazyRow`
+
+- **Status**: Accepted
+- **Context**: Omitting item keys in `LazyColumn` forces Compose to use item index as the identity key. When an item is inserted at position 0, every single row is recomposed and animated state is reset.
+- **Decision**: Always provide a unique, stable domain key using `items(items = list, key = { it.id.value })`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Smooth animations, minimal recomposition overhead, preserved item scroll states.
+  - *Cons*: Requires unique ID fields on all domain entities.
