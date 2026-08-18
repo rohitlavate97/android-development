@@ -17,21 +17,16 @@
 
 ---
 
-## 🚀 Quick Start & Local Setup Guide
+## 🚀 Key Guides & Documentation
 
-For comprehensive prerequisites, environment variable configuration, test execution, and release build steps, see:
-👉 **[SETUP_AND_BUILD_GUIDE.md](SETUP_AND_BUILD_GUIDE.md)**
-
-```bash
-# 1. Run all tests in parallel
-.\gradlew.bat test --parallel
-
-# 2. Build and install Debug APK
-.\gradlew.bat installDebug
-
-# 3. Assemble Release APK
-.\gradlew.bat assembleRelease
-```
+- 📱 **[MANUAL_TESTING_AND_USER_GUIDE.md](MANUAL_TESTING_AND_USER_GUIDE.md)** — **End-User Guide + Complete Manual QA Testing Playbook** (Test suites, edge cases, rotation/memory tests, deep links, bug report template).
+- 🛠️ **[SETUP_AND_BUILD_GUIDE.md](SETUP_AND_BUILD_GUIDE.md)** — Step-by-step local developer setup, environment variable configuration, testing, and release build instructions.
+- 🏛️ **[ARCHITECTURE.md](ARCHITECTURE.md)** — Comprehensive architecture blueprint, module topology, compilation & release pipelines.
+- 📋 **[DECISIONS.md](DECISIONS.md)** — **38 Architecture Decision Records (ADRs)** covering foundational and advanced decisions.
+- 🐞 **[DEBUGGING.md](DEBUGGING.md)** — **27 real-world debugging challenges** with progressive hints, solutions, and heap dump triage guides.
+- 🧪 **[TESTING.md](TESTING.md)** — Full test pyramid breakdown (Unit, DAO, ViewModel, Turbine, MockWebServer, UI Logic).
+- 🚨 **[docs/INCIDENT_PLAYBOOK.md](docs/INCIDENT_PLAYBOOK.md)** — Production P0-P2 incident runbook, ANR triage, memory leak protocol.
+- 🚀 **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** — Production release checklist and staged rollout strategy.
 
 ---
 
@@ -119,15 +114,3 @@ graph TD
     CNET --> CMOD
     CNET --> CCOM
 ```
-
----
-
-## 📚 Living Project Documentation
-
-- **[SETUP_AND_BUILD_GUIDE.md](SETUP_AND_BUILD_GUIDE.md)** — Step-by-step local setup, environment configuration, testing, and release build guide.
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — Comprehensive architecture blueprint, module topology, compilation & release pipelines.
-- **[DECISIONS.md](DECISIONS.md)** — 38 Architecture Decision Records (ADRs) covering foundational and advanced decisions.
-- **[DEBUGGING.md](DEBUGGING.md)** — 27 real-world debugging challenges with progressive hints, solutions, and heap dump triage guides.
-- **[TESTING.md](TESTING.md)** — Full test pyramid breakdown (Unit, DAO, ViewModel, Turbine, MockWebServer, UI Logic).
-- **[docs/INCIDENT_PLAYBOOK.md](docs/INCIDENT_PLAYBOOK.md)** — P0-P2 incident response runbook, ANR triage, memory leak protocol.
-- **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** — Production release checklist and staged rollout strategy.
