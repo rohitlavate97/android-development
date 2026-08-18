@@ -17,6 +17,24 @@
 
 ---
 
+## 🚀 Quick Start & Local Setup Guide
+
+For comprehensive prerequisites, environment variable configuration, test execution, and release build steps, see:
+👉 **[SETUP_AND_BUILD_GUIDE.md](SETUP_AND_BUILD_GUIDE.md)**
+
+```bash
+# 1. Run all tests in parallel
+.\gradlew.bat test --parallel
+
+# 2. Build and install Debug APK
+.\gradlew.bat installDebug
+
+# 3. Assemble Release APK
+.\gradlew.bat assembleRelease
+```
+
+---
+
 ## 🗺️ Architectural Evolution Roadmap (All 13 Stages Completed)
 
 ```mermaid
@@ -106,20 +124,10 @@ graph TD
 
 ## 📚 Living Project Documentation
 
+- **[SETUP_AND_BUILD_GUIDE.md](SETUP_AND_BUILD_GUIDE.md)** — Step-by-step local setup, environment configuration, testing, and release build guide.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — Comprehensive architecture blueprint, module topology, compilation & release pipelines.
 - **[DECISIONS.md](DECISIONS.md)** — 38 Architecture Decision Records (ADRs) covering foundational and advanced decisions.
 - **[DEBUGGING.md](DEBUGGING.md)** — 27 real-world debugging challenges with progressive hints, solutions, and heap dump triage guides.
 - **[TESTING.md](TESTING.md)** — Full test pyramid breakdown (Unit, DAO, ViewModel, Turbine, MockWebServer, UI Logic).
 - **[docs/INCIDENT_PLAYBOOK.md](docs/INCIDENT_PLAYBOOK.md)** — P0-P2 incident response runbook, ANR triage, memory leak protocol.
 - **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** — Production release checklist and staged rollout strategy.
-
----
-
-## 📍 Current Status
-
-- **Current Stage**: **All 13 Stages Completed — 100% Curriculum Mastered!**
-- **Production Artifacts Built**:
-  - **ProGuard / R8 Optimization**: Full-mode shrinking, dead code removal, Kotlinx Serialization / Room / Retrofit keep rules, and release log stripping.
-  - **Release Configuration**: Production signing configs, environment variable secret management, and ProGuard mapping generation.
-  - **Incident Runbook**: Production emergency response playbook (P0 crash loop triage, memory leak analysis, ANR traces).
-  - **Pre-Flight Release Checklist**: Complete Google Play release audit checklist.
