@@ -379,3 +379,36 @@
 - **Consequences & Tradeoffs**:
   - *Pros*: Immediately detects regressions during daily development with Logcat penalties.
   - *Cons*: Must be conditionally compiled out in release builds.
+
+---
+
+## ADR 036: R8 Full Mode & Production ProGuard Keep Rules
+
+- **Status**: Accepted
+- **Context**: Un-optimized release APKs exceed 30MB, contain exposed internal class names, and ship dead code. Over-aggressive shrinking without keep rules crashes JSON parsing and Room database creation at runtime.
+- **Decision**: Configure R8 Full Mode (`isMinifyEnabled = true`, `isShrinkResources = true`) with strict ProGuard keep rules for Kotlinx Serialization (`serializer()`), Room `@Entity`/`@Dao`, Retrofit service interfaces, and Koin modules.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Reduces binary size by >50%, obfuscates proprietary algorithms, eliminates dead code.
+  - *Cons*: Requires maintaining `proguard-rules.pro` and uploading `mapping.txt` to Google Play Console.
+
+---
+
+## ADR 037: Strip `android.util.Log` Calls in Release Builds
+
+- **Status**: Accepted
+- **Context**: Leaving debug `Log.d` and `Log.v` statements in release builds leaks sensitive user banking data and API endpoints into device Logcat.
+- **Decision**: Strip all `android.util.Log` calls in release builds using `-assumenosideeffects class android.util.Log { ... }` in ProGuard.
+- **Consequences & Tradeoffs**:
+  - *Pros*: 100% leak protection for Logcat, slightly smaller DEX bytecode.
+  - *Cons*: Production crash tracking must rely on Crashlytics non-fatal logging instead of Logcat.
+
+---
+
+## ADR 038: Automated Production Incident Runbook & Hotfix Branching
+
+- **Status**: Accepted
+- **Context**: Without a standardized incident runbook, P0 production crashes lead to panic, conflicting hotfix branches, and delayed Google Play expedited reviews.
+- **Decision**: Standardize on `docs/INCIDENT_PLAYBOOK.md` defining P0/P1/P2 SLAs, Remote Config kill-switches, and automated `hotfix/1.0.x` git workflows.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Fast <15 minute mitigation time on critical production outages.
+  - *Cons*: Requires training development and QA teams on runbook procedures.

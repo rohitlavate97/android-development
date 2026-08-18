@@ -19,6 +19,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            // Secure keystore lookup via environment variables or CI secrets
+            val keystoreFile = System.getenv("KEYSTORE_PATH") ?: "release.keystore"
+            storeFile = file(keystoreFile)
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "dummy_store_pass"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "finance_tracker_key"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "dummy_key_pass"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -27,6 +38,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             applicationIdSuffix = ".debug"

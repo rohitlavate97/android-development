@@ -18,34 +18,31 @@ The application is structured into **9 decoupled Gradle subprojects** adhering t
 
 ---
 
-## 2. Performance Engineering & Compilation Pipeline
+## 2. Release & Build Pipeline (R8 / ProGuard / Signing)
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│               Android Runtime (ART) Execution          │
+│             Continuous Integration & Release           │
 │                                                        │
 │   ┌─────────────────────┐       ┌──────────────────┐   │
-│   │ Baseline Profiles   │──────►│ DEX Pre-Compiles │   │
-│   │ (Critical Journeys) │ (AOT) │ (Ahead-Of-Time)  │   │
-│   └─────────────────────┘       └─────────┬────────┘   │
+│   │ Kotlin Sources &    │──────►│ R8 Full Mode     │   │
+│   │ Compose Bytecode    │       │ • Shrinking      │   │
+│   └─────────────────────┘       │ • Obfuscation    │   │
+│                                 │ • Log Stripping  │   │
+│                                 └─────────┬────────┘   │
 │                                           │            │
 │   ┌─────────────────────┐                 ▼            │
-│   │ Compose Compiler    │       ┌──────────────────┐   │
-│   │ Stability Metrics   │──────►│ 0ms JIT Delay    │   │
-│   │ (@Immutable Models) │(Skip) │ 60/120 FPS Scroll│   │
+│   │ Google Play App     │◄──────┌──────────────────┐   │
+│   │ Bundle (.aab)       │ (Sign)│ Release DEX &    │   │
+│   │ + mapping.txt       │       │ Baseline Profiles│   │
 │   └─────────────────────┘       └──────────────────┘   │
 └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. StrictMode Guardrails in Debug Builds
+## 3. StrictMode & Incident Guardrails
 
-To eliminate Main Thread bottlenecks before code hits production, `StrictModeInitializer` enforces:
-1. **ThreadPolicy**:
-   - `detectDiskReads()` / `detectDiskWrites()`: Flags synchronous file/SharedPreferences access.
-   - `detectNetwork()`: Throws immediately if HTTP sockets open on Main.
-   - `detectCustomSlowCalls()`: Logs long-running computation blocks.
-2. **VmPolicy**:
-   - `detectLeakedClosableObjects()`: Flags unclosed Streams or SQLite cursors.
-   - `detectActivityLeaks()`: Catches static Activity references upon screen rotation.
+To eliminate Main Thread bottlenecks and memory leaks before production:
+1. **StrictModeInitializer**: Enforces strict ThreadPolicy (zero disk/network on Main) and VmPolicy (cursor and Activity leak detection) in debug builds.
+2. **Production Incident Runbook (`docs/INCIDENT_PLAYBOOK.md`)**: P0 crash loop escalation, hotfix branching strategy, and staged rollout monitoring.

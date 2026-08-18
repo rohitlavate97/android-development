@@ -316,7 +316,7 @@ When investigating OutOfMemoryError (OOM) or Activity retention in Android Studi
 * **Question for QA Engineer**: *Why does the Compose compiler treat `List<TransactionUiModel>` as unstable by default, and how does `@Immutable` fix this?*
 * 💡 **Hint 1**: Standard Kotlin `List<T>` is an interface; the underlying runtime instance could be a mutable `ArrayList`.
 * 💡 **Hint 2**: Read ADR 034 on Compose stability annotations.
-* ✅ **Solution**: Annotate `TransactionUiModel` and `HoldingUiModel` with `@Immutable`. Compose compiler will mark them as stable and skip recompositions if their fields haven't changed.
+* ✅ **Solution**: Annotate `TransactionUiModel` and `HoldingUiModel` with `@Immutable`.
 
 ---
 
@@ -325,10 +325,30 @@ When investigating OutOfMemoryError (OOM) or Activity retention in Android Studi
 * **Code Fragment**:
   ```kotlin
   object SecurityNotificationHelper {
-      var activityContext: Context? = null // Holds Activity context!
+      var activityContext: Context? = null
   }
   ```
 * **Question for QA Engineer**: *Why does holding an Activity reference in a Singleton cause a massive memory leak upon screen rotation?*
 * 💡 **Hint 1**: The OS creates a new Activity on rotation and calls `onDestroy()` on the previous one.
 * 💡 **Hint 2**: GC Roots: A static field is never garbage collected during the process lifetime.
 * ✅ **Solution**: Never store Activity context in singletons. Pass `applicationContext` or inject dependencies via Koin.
+
+---
+
+## 🎯 Stage 13 Debugging Challenges (Release Engineering & ProGuard/R8)
+
+### Challenge 26: R8 Stripped Kotlinx Serializer Crash in Release Builds
+* **Symptom**: Debug build works perfectly. Release build crashes on login API response with `SerializationException: Serializer for class 'NetworkTransactionDto' is not found. Mark the class as @Serializable or provide serializer explicitly`.
+* **Question for QA Engineer**: *Why does R8 full mode strip companion serializers if not explicitly preserved in `proguard-rules.pro`?*
+* 💡 **Hint 1**: Kotlinx Serialization generates companion `serializer()` synthetic methods at compile-time.
+* 💡 **Hint 2**: Read ADR 036 on ProGuard keep rules.
+* ✅ **Solution**: Add `-keepclasseswithmembers class * { kotlinx.serialization.KSerializer serializer(...); }` and `-keepclassmembers class * { *** Companion; }` in `proguard-rules.pro`.
+
+---
+
+### Challenge 27: Missing Room Database Implementation in Minified APK
+* **Symptom**: Release APK crashes on launch with `RuntimeException: Cannot find implementation for com.enterprise.financetracker.data.local.FinanceDatabase. FinanceDatabase_Impl does not exist`.
+* **Question for QA Engineer**: *Why does Room use reflection to instantiate `_Impl` classes, and how do we prevent R8 from obfuscating/stripping them?*
+* 💡 **Hint 1**: Room generates `FinanceDatabase_Impl` at compile-time and instantiates it via `Room.databaseBuilder`.
+* 💡 **Hint 2**: Read ADR 036.
+* ✅ **Solution**: Add `-keep class **_Impl { *; }` and `-keep class * extends androidx.room.RoomDatabase` in `proguard-rules.pro`.
