@@ -96,3 +96,39 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 * 💡 **Hint 1**: `remember` stores values in the Composition slot table in memory.
 * 💡 **Hint 2**: Read ADR 006 on saved state.
 * ✅ **Solution**: Use `rememberSaveable` which writes the state to the Android `SavedStateRegistry`.
+
+---
+
+## 🎯 Stage 4 Debugging Challenges (Coroutines & Concurrency)
+
+### Challenge 8: The Swallowed Cancellation Bug
+* **Symptom**: A user cancels a long-running sync job or navigates away from a screen, but the background HTTP download continues running in Logcat, burning battery and data.
+* **Code Fragment**:
+  ```kotlin
+  suspend fun syncData() {
+      try {
+          fetchLargeFile()
+      } catch (e: Exception) {
+          Log.e(TAG, "Failed: ${e.message}")
+      }
+  }
+  ```
+* **Question for QA Engineer**: *Why does catching `Exception` break coroutine cancellation?*
+* 💡 **Hint 1**: What is the inheritance hierarchy of `CancellationException` in Kotlin?
+* 💡 **Hint 2**: Structured concurrency relies on `CancellationException` bubbling up to cancel the parent Job.
+* ✅ **Solution**: Re-throw `CancellationException`: `if (e is CancellationException) throw e` or use `safeSuspendCall`.
+
+---
+
+### Challenge 9: The Flaky Test Thread.sleep() Anti-Pattern
+* **Symptom**: A unit test asserting `StateFlow` emission passes on a fast local MacBook, but fails 20% of the time on a slower CI runner.
+* **Code Fragment**:
+  ```kotlin
+  viewModel.loadData()
+  Thread.sleep(500) // Waiting for IO thread
+  assertEquals(expectedState, viewModel.uiState.value)
+  ```
+* **Question for QA Engineer**: *Why is `Thread.sleep()` an antipattern in asynchronous testing, and how does `runTest` solve it?*
+* 💡 **Hint 1**: What does `StandardTestDispatcher` do to coroutine virtual time?
+* 💡 **Hint 2**: Read ADR 010 on `DispatcherProvider` and Turbine `test {}`.
+* ✅ **Solution**: Inject `TestDispatcherProvider` and use `testDispatcher.scheduler.advanceUntilIdle()` or Turbine's `awaitItem()`.

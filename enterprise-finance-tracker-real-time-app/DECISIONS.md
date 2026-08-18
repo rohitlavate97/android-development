@@ -90,3 +90,36 @@
 - **Consequences & Tradeoffs**:
   - *Pros*: Smooth animations, minimal recomposition overhead, preserved item scroll states.
   - *Cons*: Requires unique ID fields on all domain entities.
+
+---
+
+## ADR 010: Inject Coroutine Dispatchers via `DispatcherProvider`
+
+- **Status**: Accepted
+- **Context**: Hardcoding `Dispatchers.IO` or `Dispatchers.Default` inside repositories or ViewModels breaks unit tests by forcing multi-threaded concurrency and `Thread.sleep()` hacks.
+- **Decision**: Always inject a `DispatcherProvider` interface. Use `StandardDispatcherProvider` in production and `TestDispatcherProvider` (`StandardTestDispatcher`) in unit tests.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Deterministic virtual-time execution with `advanceUntilIdle()` and zero flaky tests.
+  - *Cons*: Requires passing `DispatcherProvider` into constructors.
+
+---
+
+## ADR 011: Expose UI State with `SharingStarted.WhileSubscribed(5_000)`
+
+- **Status**: Accepted
+- **Context**: Using `SharingStarted.Eagerly` or `Lazily` keeps upstream cold Flows (e.g. database/location/live stock tickers) active indefinitely even when the app is in the background, wasting CPU and battery.
+- **Decision**: Always convert cold flows to `StateFlow` using `.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InitialState)`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Cancels upstream subscriptions 5 seconds after all UI collectors detach (allowing screen rotation buffer without restarting flows).
+  - *Cons*: Requires understanding lifecycle-aware collection (`collectAsStateWithLifecycle()`).
+
+---
+
+## ADR 012: Strictly Preserve `CancellationException` in Catch Blocks
+
+- **Status**: Accepted
+- **Context**: Catching `java.lang.Exception` or using `runCatching` in suspend functions silently swallows `CancellationException`, which prevents Coroutines from cancelling parent jobs and causes memory leaks.
+- **Decision**: In all try-catch blocks in suspend functions, explicitly rethrow `CancellationException` before handling generic exceptions.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Clean structured concurrency and instant coroutine cancellation.
+  - *Cons*: Requires developer discipline to avoid `try { ... } catch (e: Exception)` without rethrowing.

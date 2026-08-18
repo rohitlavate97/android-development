@@ -6,21 +6,20 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import com.enterprise.financetracker.core.concurrency.StandardDispatcherProvider
+import com.enterprise.financetracker.data.repository.InMemoryReactiveTransactionRepository
+import com.enterprise.financetracker.data.repository.LiveTickerPortfolioRepository
 import com.enterprise.financetracker.domain.model.*
 import com.enterprise.financetracker.ui.screens.*
 import com.enterprise.financetracker.ui.theme.EnterpriseFinanceTheme
-import kotlinx.datetime.Instant
-
-enum class AppScreen {
-    LOGIN,
-    DASHBOARD,
-    TRANSACTION_LIST,
-    TRANSACTION_DETAIL
-}
+import com.enterprise.financetracker.ui.viewmodels.DashboardViewModel
+import com.enterprise.financetracker.ui.viewmodels.TransactionListViewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 /**
- * Launcher Activity rendering the declarative Jetpack Compose UI.
- * (Phase 4 & Stage 3)
+ * Launcher Activity rendering the reactive Jetpack Compose UI powered by Coroutines & Flow.
+ * (Phase 2, Phase 4 & Stage 4)
  */
 class MainActivity : ComponentActivity() {
 
@@ -28,88 +27,16 @@ class MainActivity : ComponentActivity() {
         private const val TAG = "MainActivity"
     }
 
+    private val dispatchers = StandardDispatcherProvider()
+    private val transactionRepository = InMemoryReactiveTransactionRepository(dispatchers)
+    private val portfolioRepository = LiveTickerPortfolioRepository(dispatchers)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.i(TAG, "onCreate: Initializing Jetpack Compose UI content")
+        Log.i(TAG, "onCreate: Initializing reactive Coroutines & Flow UI engine")
 
-        // Mock domain data for Stage 3 Compose UI layer verification
-        val sampleCategories = listOf(
-            Category(CategoryId("cat_salary"), "Salary", "payments", "#4CAF50"),
-            Category(CategoryId("cat_food"), "Food & Dining", "restaurant", "#FF5722"),
-            Category(CategoryId("cat_shopping"), "Electronics", "shopping_cart", "#2196F3"),
-            Category(CategoryId("cat_housing"), "Housing Rent", "home", "#9C27B0")
-        )
-
-        val sampleTransactions = listOf(
-            Transaction(
-                id = TransactionId("tx_1"),
-                accountId = AccountId("acc_checking"),
-                title = "Tech Corp Bi-weekly Paycheck",
-                amount = 4250.00,
-                type = TransactionType.Income,
-                category = sampleCategories[0],
-                timestamp = Instant.fromEpochMilliseconds(1738000000000L)
-            ),
-            Transaction(
-                id = TransactionId("tx_2"),
-                accountId = AccountId("acc_checking"),
-                title = "Whole Foods Organic Market",
-                amount = 142.80,
-                type = TransactionType.Expense,
-                category = sampleCategories[1],
-                timestamp = Instant.fromEpochMilliseconds(1738100000000L)
-            ),
-            Transaction(
-                id = TransactionId("tx_3"),
-                accountId = AccountId("acc_checking"),
-                title = "Dell UltraSharp 4K Monitor",
-                amount = 499.99,
-                type = TransactionType.Expense,
-                category = sampleCategories[2],
-                timestamp = Instant.fromEpochMilliseconds(1738200000000L)
-            ),
-            Transaction(
-                id = TransactionId("tx_4"),
-                accountId = AccountId("acc_checking"),
-                title = "Monthly Apartment Rent",
-                amount = 1800.00,
-                type = TransactionType.Expense,
-                category = sampleCategories[3],
-                timestamp = Instant.fromEpochMilliseconds(1738300000000L),
-                isRecurring = true
-            )
-        )
-
-        val samplePortfolio = Portfolio(
-            id = PortfolioId("port_growth"),
-            name = "Primary Tech & Crypto Portfolio",
-            holdings = listOf(
-                InvestmentHolding(
-                    ticker = TickerSymbol("AAPL"),
-                    name = "Apple Inc.",
-                    shares = 25.0,
-                    averageBuyPrice = 160.00,
-                    currentMarketPrice = 195.00,
-                    assetClass = AssetClass.EQUITY
-                ),
-                InvestmentHolding(
-                    ticker = TickerSymbol("NVDA"),
-                    name = "NVIDIA Corporation",
-                    shares = 15.0,
-                    averageBuyPrice = 90.00,
-                    currentMarketPrice = 135.00,
-                    assetClass = AssetClass.EQUITY
-                ),
-                InvestmentHolding(
-                    ticker = TickerSymbol("BTC"),
-                    name = "Bitcoin",
-                    shares = 0.45,
-                    averageBuyPrice = 58000.00,
-                    currentMarketPrice = 64000.00,
-                    assetClass = AssetClass.CRYPTO
-                )
-            )
-        )
+        val dashboardViewModel = DashboardViewModel(transactionRepository, portfolioRepository, dispatchers)
+        val transactionListViewModel = TransactionListViewModel(transactionRepository, dispatchers)
 
         setContent {
             EnterpriseFinanceTheme {
@@ -124,8 +51,7 @@ class MainActivity : ComponentActivity() {
                     }
                     AppScreen.DASHBOARD -> {
                         DashboardRoute(
-                            portfolio = samplePortfolio,
-                            transactions = sampleTransactions,
+                            viewModel = dashboardViewModel,
                             onNavigateToTransactions = { currentScreen = AppScreen.TRANSACTION_LIST },
                             onNavigateToTransactionDetail = { id ->
                                 selectedTransactionId = id.value
@@ -135,7 +61,7 @@ class MainActivity : ComponentActivity() {
                     }
                     AppScreen.TRANSACTION_LIST -> {
                         TransactionListRoute(
-                            transactions = sampleTransactions,
+                            viewModel = transactionListViewModel,
                             onNavigateBack = { currentScreen = AppScreen.DASHBOARD },
                             onNavigateToDetail = { id ->
                                 selectedTransactionId = id.value
@@ -144,11 +70,20 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     AppScreen.TRANSACTION_DETAIL -> {
-                        val selectedTx = sampleTransactions.find { it.id.value == selectedTransactionId }
+                        var transaction by remember { mutableStateOf<Transaction?>(null) }
+                        LaunchedEffect(selectedTransactionId) {
+                            if (selectedTransactionId != null) {
+                                transaction = transactionRepository.getTransactionById(TransactionId(selectedTransactionId!!))
+                            }
+                        }
+
                         TransactionDetailRoute(
-                            transaction = selectedTx,
+                            transaction = transaction,
                             onNavigateBack = { currentScreen = AppScreen.TRANSACTION_LIST },
-                            onDeleteClick = { currentScreen = AppScreen.TRANSACTION_LIST }
+                            onDeleteClick = { tx ->
+                                transactionListViewModel.deleteTransaction(tx.id)
+                                currentScreen = AppScreen.TRANSACTION_LIST
+                            }
                         )
                     }
                 }

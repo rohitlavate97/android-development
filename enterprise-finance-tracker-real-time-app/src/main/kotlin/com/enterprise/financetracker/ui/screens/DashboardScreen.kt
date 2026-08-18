@@ -8,40 +8,62 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.enterprise.financetracker.domain.model.*
 import com.enterprise.financetracker.ui.components.EmptyStateWidget
 import com.enterprise.financetracker.ui.components.HoldingCard
 import com.enterprise.financetracker.ui.components.TransactionCard
+import com.enterprise.financetracker.ui.viewmodels.DashboardUiState
+import com.enterprise.financetracker.ui.viewmodels.DashboardViewModel
 
-// Layer 1: Route
+// Layer 1: Route (Collects StateFlow via collectAsStateWithLifecycle)
 @Composable
 fun DashboardRoute(
-    portfolio: Portfolio,
-    transactions: List<Transaction>,
+    viewModel: DashboardViewModel,
     onNavigateToTransactions: () -> Unit,
     onNavigateToTransactionDetail: (TransactionId) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val totalBalance = 12450.00
-    val totalNetWorth = totalBalance + portfolio.totalPortfolioValue
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    DashboardScreen(
-        netWorth = totalNetWorth,
-        cashBalance = totalBalance,
-        portfolio = portfolio,
-        recentTransactions = transactions.take(5),
-        onViewAllTransactions = onNavigateToTransactions,
-        onTransactionClick = onNavigateToTransactionDetail,
-        modifier = modifier
-    )
+    when (val state = uiState) {
+        is DashboardUiState.Loading -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        is DashboardUiState.Success -> {
+            DashboardScreen(
+                netWorth = state.totalNetWorth,
+                cashBalance = state.cashBalance,
+                portfolio = state.portfolio,
+                recentTransactions = state.recentTransactions,
+                onViewAllTransactions = onNavigateToTransactions,
+                onTransactionClick = onNavigateToTransactionDetail,
+                modifier = modifier
+            )
+        }
+        is DashboardUiState.Error -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
 }
 
-// Layer 2: Stateless Screen
+// Layer 2: Stateless Screen (100% Previewable & Testable)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -103,7 +125,7 @@ fun DashboardScreen(
                                 Text("$${String.format("%.2f", cashBalance)}", fontWeight = FontWeight.SemiBold)
                             }
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("Investments", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                                Text("Investments (Live)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
                                 Text("$${String.format("%.2f", portfolio.totalPortfolioValue)}", fontWeight = FontWeight.SemiBold)
                             }
                         }
