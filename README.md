@@ -1,6 +1,35 @@
 # Modern Android Development Master Curriculum
 
-> A comprehensive, production-grade Android development curriculum engineered for developers with a **Java / QA Automation / Backend** background transitioning into **Professional Android Engineering**.
+> A comprehensive, production-grade Android development curriculum and real-time enterprise application repository engineered for developers with a **Java / QA Automation / Backend** background transitioning into **Professional Android Engineering**.
+
+---
+
+## 🏛️ Repository Structure
+
+```
+├── enterprise-finance-tracker-real-time-app/  # 🚀 The Step-by-Step Incremental Real-Time App
+│   ├── ARCHITECTURE.md                        # Architecture blueprint & stage evolution
+│   ├── DECISIONS.md                           # Architecture Decision Records (ADRs)
+│   ├── DEBUGGING.md                           # Bug investigation logs & debugging challenges
+│   ├── TESTING.md                             # Testing strategy & Given-When-Then specs
+│   ├── prompt.md                              # Master incremental build prompt
+│   └── src/                                   # Application source code (evolved stage-by-stage)
+│
+├── milestones/                                # 🗺️ 12 Milestone guides for building from scratch
+├── phase-1-kotlin.md                          # 📘 Phase 1: Kotlin (18 concepts)
+├── phase-2-coroutines-and-flow.md             # 📘 Phase 2: Coroutines & Flow (19 concepts)
+├── phase-3-android-platform-fundamentals.md   # 📘 Phase 3: Platform Fundamentals (14 concepts)
+├── phase-4-jetpack-compose.md                 # 📘 Phase 4: Jetpack Compose (16 concepts)
+├── phase-5-app-architecture.md                # 📘 Phase 5: App Architecture (11 concepts)
+├── phase-6-dependency-injection.md            # 📘 Phase 6: Dependency Injection (9 concepts)
+├── phase-7-networking.md                      # 📘 Phase 7: Networking & Resilience (11 concepts)
+├── phase-8-local-persistence.md               # 📘 Phase 8: Local Persistence (9 concepts)
+├── phase-9-navigation.md                      # 📘 Phase 9: Navigation-Compose (10 concepts)
+├── phase-10-testing.md                        # 📘 Phase 10: Testing Pyramid (11 concepts)
+├── phase-11-gradle-and-modularization.md      # 📘 Phase 11: Gradle & Modularization (10 concepts)
+├── phase-12-quality-performance-and-observability.md # 📘 Phase 12: Quality & Observability (10 concepts)
+└── phase-13-release-engineering-and-production-playbook.md # 📘 Phase 13: Release Engineering (8 concepts)
+```
 
 ---
 
@@ -81,34 +110,19 @@ graph TD
 
 ---
 
-## 🏗️ The Running Project: Enterprise Expense & Investment Tracker
+## 📱 The Real-Time App: `enterprise-finance-tracker-real-time-app`
 
-Throughout the curriculum, you build a production-grade **Enterprise Expense & Investment Tracker** that evolves with each phase:
+The active, incremental application lives in **[`enterprise-finance-tracker-real-time-app/`](enterprise-finance-tracker-real-time-app/)**.
 
-```
-v1 (Phase 1)  ➔ Pure Kotlin Domain Entities & Use Cases
-v2 (Phase 4)  ➔ Declarative Jetpack Compose UI (Material 3, Dark Mode, 3-Layer Screens)
-v3 (Phase 2)  ➔ Reactive Concurrency (Coroutines, StateFlow, WhileSubscribed)
-v4 (Phase 5)  ➔ Clean Layered Architecture (UI ↔ Domain ↔ Data, MVVM & MVI)
-v5 (Phase 6)  ➔ Dependency Injection Graph (Hilt & Koin implementations)
-v6 (Phase 7)  ➔ Network Resilience (Retrofit, OkHttp, 401 Mutex token refresh, MockWebServer)
-v7 (Phase 8)  ➔ Offline-First Persistence (Room DB, Flow queries, DataStore preferences)
-v8 (Phase 9)  ➔ Type-Safe Navigation Graph (@Serializable routes, deep links)
-v9 (Phase 10) ➔ Full Test Pyramid (Turbine, Fakes, Compose UI tests, Roborazzi screenshots)
-v10 (Phase 11)➔ Multi-Module Architecture (:app, :core:*, :feature:*-api, :feature:*)
-```
+- **Stage 1 (Completed)**: Pure Kotlin Domain Foundation (Entities, value classes, validation, tests)
+- **Stage 2 (Completed)**: Android Platform Fundamentals (Gradle, Manifest, Application, Activity lifecycle, StrictMode)
+- **Stage 3 (Next)**: Jetpack Compose UI (Authentication, Dashboard, Transactions list, Material 3)
+- ... evolving through all 13 stages!
 
 ---
 
 ## 📖 Master Reference Documents
 
-- **[Master Prompt & Instructor Blueprint](master-prompt-android-learning-guide.md)**: Defines the 26-section teaching protocol, source-of-truth rules, stuck escalation protocols, and evaluation criteria.
-- **[Android Development Learning Path](android-development-learning-path.md)**: The comprehensive curriculum source document, stack recommendations, and architecture rules.
-
----
-
-## 🚀 How to Use This Curriculum
-
-1. **Self-Paced Progression**: Start with [Phase 1](phase-1-kotlin.md) and work sequentially through [Phase 13](phase-13-release-engineering-and-production-playbook.md).
-2. **Complete the Exercises**: Every concept includes an **Exercise** (§10) and a **Deliberate Failure** (§11). Always write the test and observe the code fail before applying the fix.
-3. **Verify at Checkpoints**: Each phase concludes with a **Checkpoint Gate** (§13) containing architectural, debugging, and production scenario questions to validate complete understanding.
+- **[Master Prompt & Instructor Blueprint](master-prompt-android-learning-guide.md)**: Defines the teaching protocol, source-of-truth rules, stuck escalation protocols, and evaluation criteria.
+- **[Android Development Learning Path](android-development-learning-path.md)**: The comprehensive curriculum source document.
+- **[Master Project Prompt](master-prompt-expense-tracker-project.md)**: Architecture directives and execution protocols for project milestones.
