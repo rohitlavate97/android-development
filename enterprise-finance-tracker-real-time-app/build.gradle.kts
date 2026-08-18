@@ -81,6 +81,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
 
+    // Navigation Compose (Type-Safe @Serializable Routes)
+    implementation(libs.androidx.navigation.compose)
+
     // Koin Dependency Injection
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)

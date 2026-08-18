@@ -218,3 +218,27 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 * 💡 **Hint 1**: Disk I/O latency ranges from 5ms to 500ms; Android frames must render in 16.6ms.
 * 💡 **Hint 2**: Suspend functions and Flow in Room offload queries to background threads automatically.
 * ✅ **Solution**: Mark DAO functions as `suspend` or return `Flow<T>`, and call them inside `viewModelScope.launch(dispatchers.io)`.
+
+---
+
+## 🎯 Stage 9 Debugging Challenges (Navigation & Deep Links)
+
+### Challenge 18: The Double-Click Navigation Crash / Duplicate Destinations
+* **Symptom**: A user rapidly taps the "Transactions" card twice on the Dashboard. The Transaction List screen opens twice, and pressing Back opens the same list screen again.
+* **Code Fragment**:
+  ```kotlin
+  navController.navigate(TransactionListDestination)
+  ```
+* **Question for QA Engineer**: *Why does Navigation-Compose push two identical destinations onto the backstack, and how do you prevent it?*
+* 💡 **Hint 1**: What does `launchSingleTop = true` do?
+* 💡 **Hint 2**: Read ADR 025.
+* ✅ **Solution**: Pass `{ launchSingleTop = true }` in the `navigate` lambda builder: `navController.navigate(TransactionListDestination) { launchSingleTop = true }`.
+
+---
+
+### Challenge 19: Unserializable Custom Complex Object in Route Argument
+* **Symptom**: A developer passes a complete domain object into a destination class: `@Serializable data class DetailRoute(val transaction: Transaction)`. Running the app crashes with `IllegalArgumentException: Navigation destination route classes should only contain primitive or simple parcelable arguments`.
+* **Question for QA Engineer**: *Why is passing entire data models between screens an architectural anti-pattern in Android?*
+* 💡 **Hint 1**: What happens during process recreation if a large object was serialized into the backstack bundle?
+* 💡 **Hint 2**: Read ADR 001 and Single Source of Truth (SSOT).
+* ✅ **Solution**: Pass ONLY the identifier `@Serializable data class TransactionDetailDestination(val transactionId: String)`. Let the target screen query the repository / SSOT database using the ID.

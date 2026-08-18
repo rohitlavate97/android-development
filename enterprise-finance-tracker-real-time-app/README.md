@@ -27,7 +27,7 @@ graph TD
     S05 --> S06["Stage 6: Dependency Injection (Koin & Hilt) ✅"]
     S06 --> S07["Stage 7: Resilient Networking (Retrofit, 401 Mutex, 6-path errors) ✅"]
     S07 --> S08["Stage 8: Offline-First Persistence (Room, DataStore) ✅"]
-    S08 --> S09["Stage 9: Type-Safe Navigation & Deep Links"]
+    S08 --> S09["Stage 9: Type-Safe Navigation & Deep Links ✅"]
     S09 --> S10["Stage 10: Complete Test Pyramid (Turbine, Fakes, Compose UI)"]
     S10 --> S11["Stage 11: Modularization (:app, :core:*, :feature:*-api/-impl)"]
     S11 --> S12["Stage 12: Production Quality (StrictMode, Profiler, Baseline Profiles)"]
@@ -41,6 +41,7 @@ graph TD
     style S06 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S07 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S08 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style S09 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---
@@ -56,11 +57,10 @@ graph TD
 
 ## 📍 Current Status
 
-- **Current Stage**: **Stage 8 Completed — Local Persistence & Offline-First SSOT (Room + DataStore)**
+- **Current Stage**: **Stage 9 Completed — Type-Safe Navigation & Deep Linking**
 - **Artifacts Built**:
-  - **Room SQLite Architecture**: `TransactionEntity`, `CategoryEntity`, `TransactionWithCategory` relations, indices, foreign keys.
-  - **DAOs & Type Converters**: `TransactionDao` (reactive Flow queries), `CategoryDao`, `FinanceTypeConverters`.
-  - **Schema Migrations**: Schema v1 with automated migration template `MIGRATION_1_2`.
-  - **Preferences DataStore**: `UserPreferencesDataStore` for base currency, biometrics state, and sync timestamps.
-  - **Single Source of Truth Repository**: `OfflineFirstExpenseRepositoryImpl` (UI reads strictly from Room, remote responses write into Room).
-  - **Automated SSOT Test Suite**: `OfflineFirstExpenseRepositoryTest` verifying reactive cache updates without polling.
+  - **Type-Safe Routes**: `@Serializable` destination objects (`LoginDestination`, `DashboardDestination`, `TransactionListDestination`) and classes (`TransactionDetailDestination(transactionId)`).
+  - **Nested Graphs**: `AuthGraph` and `MainGraph` with backstack popping (`popUpTo<AuthGraph> { inclusive = true }`).
+  - **Animated Transitions**: Smooth horizontal slide and cross-fade animations on screen entry/exit.
+  - **Production Deep Linking**: `navDeepLink<TransactionDetailDestination>` declared in Compose NavHost and `<intent-filter>` in `AndroidManifest.xml` for `https://financetracker.enterprise.com/transactions/{transactionId}`.
+  - **Automated Navigation Tests**: `NavigationDestinationSerializationTest` verifying route arguments and URL pattern matching.

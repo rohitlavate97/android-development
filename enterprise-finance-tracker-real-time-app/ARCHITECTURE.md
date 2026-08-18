@@ -2,71 +2,71 @@
 
 ## 1. High-Level Target Architecture
 
-The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)** powered by Offline-First Single Source of Truth (SSOT):
+The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)** powered by Type-Safe Navigation:
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│                        UI Layer                        │
-│   Jetpack Compose (Stateless Screens + Atomic Atoms)   │
-│                          ↓                             │
-│   ViewModel (MVI State Machine / MVVM State Holder)    │
-│              (StateFlow<UiState> + UI Intents)         │
-└──────────────────────────┬─────────────────────────────┘
-                           │ (Injected via koinViewModel())
-┌──────────────────────────▼─────────────────────────────┐
-│                      Domain Layer                      │
-│   Use Cases (factoryOf(::UseCase), invoke())           │
-│   Domain Entities & Value Classes (Pure Kotlin)        │
-│   Repository Interfaces (Contracts)                    │
-└──────────────────────────▲─────────────────────────────┘
-                           │ (singleOf(::RepositoryImpl) bind Repository::class)
-┌──────────────────────────┴─────────────────────────────┐
-│                 Data Layer (Offline-First SSOT)         │
-│   Repository Implementation (OfflineFirstExpenseRepo)  │
+│               Type-Safe Navigation-Compose             │
+│        (FinanceNavHost with Animated Transitions)      │
 │                                                        │
 │   ┌─────────────────────┐       ┌──────────────────┐   │
-│   │ Room Database (SSOT)│◄──────│ Remote DataSource│   │
-│   │ (SQLite + DataStore)│ (Sync)│(Retrofit + OkHttp│   │
-│   └──────────┬──────────┘       └──────────────────┘   │
-└──────────────┼─────────────────────────────────────────┘
-               │ (UI observes Room exclusively via Flow)
+│   │ AuthGraph           │       │ MainGraph        │   │
+│   │ • LoginDestination  │──────►│ • DashboardDest  │   │
+│   │ (Cleared on Login)  │PopUpTo│ • TxListDest     │   │
+│   └─────────────────────┘       │ • TxDetail(id)   │   │
+│                                 └──────────────────┘   │
+└──────────────────────────┬─────────────────────────────┘
+                           │ (Collects StateFlow)
+┌──────────────────────────▼─────────────────────────────┐
+│                            ViewModel Layer             │
+│   • DashboardViewModel & TransactionListMviViewModel   │
+└──────────────────────────┬─────────────────────────────┘
+                           │ (Calls UseCases)
+┌──────────────────────────▼─────────────────────────────┐
+│                      Domain Layer                      │
+│   • Use Cases (operator fun invoke())                  │
+└──────────────────────────▲─────────────────────────────┘
+                           │ (Implemented in Data)
+┌──────────────────────────┴─────────────────────────────┐
+│                 Data Layer (Offline-First SSOT)         │
+│   • Room Database (SQLite SSOT)                        │
+│   • Retrofit Remote Sync & OkHttp 401 Mutex            │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. The Offline-First SSOT Reactive Loop
-
-Under this architecture, the UI **NEVER** observes the network directly. The local SQLite database is the Single Source of Truth:
+## 2. Navigation Graph Hierarchy & Backstack Flow
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor UI as Compose UI / ViewModel
-    participant Repo as OfflineFirstExpenseRepository
-    participant DB as Room SQLite Database
-    participant Remote as Remote API (Retrofit)
-
-    UI->>Repo: observeTransactions()
-    Repo->>DB: Query observeAllWithCategory() [Flow]
-    DB-->>UI: Emits cached transactions immediately (<10ms)
-
-    Note over Repo,Remote: Background Sync Triggered
-    Repo->>Remote: fetchTransactions()
-    Remote-->>Repo: 200 OK (Fresh JSON payload)
-    Repo->>DB: insertAll(newTransactions) [Room Transaction]
-
-    Note over DB,UI: Room detects table change via InvalidationTracker
-    DB-->>UI: Automatically emits updated transaction list via Flow!
+graph TD
+    Root["FinanceNavHost (start: AuthGraph)"]
+    
+    subgraph AuthGraph ["AuthGraph (Nested)"]
+        Login["LoginDestination"]
+    end
+    
+    subgraph MainGraph ["MainGraph (Nested)"]
+        Dashboard["DashboardDestination"]
+        TxList["TransactionListDestination"]
+        TxDetail["TransactionDetailDestination(transactionId: String)"]
+    end
+    
+    Root --> AuthGraph
+    Login -->|"Login Success (popUpTo AuthGraph inclusive=true)"| Dashboard
+    Dashboard -->|"View All"| TxList
+    Dashboard -->|"Click Transaction Item"| TxDetail
+    TxList -->|"Click Transaction Item"| TxDetail
+    TxDetail -->|"Done / Delete"| TxList
+    
+    DeepLink["Deep Link: https://financetracker.enterprise.com/transactions/{id}"] -->|Direct Launch| TxDetail
 ```
 
 ---
 
-## 3. Data Storage Technology Comparison
+## 3. Deep Linking Verification Workflow
 
-| Criteria | Room SQLite | Preferences DataStore | Legacy SharedPreferences |
-|---|---|---|---|
-| **Data Type** | Relational, complex queries, multi-table joins. | Key-Value primitive pairs (settings, flags). | Key-Value primitive pairs. |
-| **Threading** | Main-safety enforced; queries run off-thread via Flow/suspend. | 100% Asynchronous via Kotlin Coroutines / Flow. | Synchronous disk I/O on UI thread (causes ANRs). |
-| **Error Handling** | Compile-time SQL validation + try/catch. | Catches `IOException` safely. | Silently fails or crashes. |
-| **Reactive Support**| Native `Flow<List<T>>` invalidation streams. | Native `Flow<Preferences>` updates. | Requires manual `OnSharedPreferenceChangeListener`. |
-| **Use Case in App** | Transactions, Accounts, Categories, Portfolio. | Currency symbol, Biometric lock, Last Sync Time. | **DEPRECATED — NEVER USE**. |
+1. An external app or push notification dispatches an `ACTION_VIEW` intent with URL `https://financetracker.enterprise.com/transactions/tx_100`.
+2. The Android OS inspects `AndroidManifest.xml` intent-filter with `android:autoVerify="true"`.
+3. `MainActivity` receives the intent. `Navigation-Compose` matches the URL against `navDeepLink<TransactionDetailDestination>`.
+4. The router automatically deserializes `destination.transactionId` and navigates directly to `TransactionDetailDestination`, pushing `DashboardDestination` into the synthetic backstack so the Back button returns to the home screen.

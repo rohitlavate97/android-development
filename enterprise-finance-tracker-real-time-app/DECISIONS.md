@@ -247,3 +247,36 @@
 - **Consequences & Tradeoffs**:
   - *Pros*: Zero user data loss across production database upgrades.
   - *Cons*: Requires writing manual SQL `ALTER TABLE` scripts for schema alterations.
+
+---
+
+## ADR 024: Type-Safe `@Serializable` Navigation-Compose Destinations
+
+- **Status**: Accepted
+- **Context**: Legacy Navigation-Compose used raw strings like `"transactions/{id}?filter={filter}"`, causing runtime crashes due to typos in argument keys and complex manual argument parsing.
+- **Decision**: Use Kotlinx `@Serializable` objects (`DashboardDestination`) and data classes (`TransactionDetailDestination(val transactionId: String)`).
+- **Consequences & Tradeoffs**:
+  - *Pros*: 100% compile-time type safety for arguments and routes; automated URL encoding/decoding.
+  - *Cons*: Requires Kotlin Serialization plugin and Navigation-Compose 2.8+.
+
+---
+
+## ADR 025: Clear Authentication Backstack with `popUpTo<AuthGraph> { inclusive = true }`
+
+- **Status**: Accepted
+- **Context**: When a user logs in, pressing the device system Back button should exit the app rather than reopening the Login form.
+- **Decision**: When navigating from `AuthGraph` to `MainGraph`, pop up to `AuthGraph` with `inclusive = true` and `launchSingleTop = true`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Clean backstack behavior adhering to Android navigation guidelines.
+  - *Cons*: Requires structuring screens into nested navigation graphs (`AuthGraph`, `MainGraph`).
+
+---
+
+## ADR 026: Production Deep Linking with `navDeepLink<T>`
+
+- **Status**: Accepted
+- **Context**: Navigating to deep link destinations via manual Intent parsing in Activities scatters routing logic across multiple files.
+- **Decision**: Declare deep links directly on composable destinations using `navDeepLink<Destination>(basePath = ...)` and `android:autoVerify="true"` in the manifest.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Centralized routing, automated argument extraction from URL query/path parameters.
+  - *Cons*: Requires matching URL path structure with destination properties.
