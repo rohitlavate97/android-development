@@ -2,7 +2,7 @@
 
 ## 1. High-Level Target Architecture
 
-The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)** powered by Dependency Injection:
+The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)** powered by Dependency Injection and Resilient Networking:
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -30,39 +30,47 @@ The application implements Google's recommended **Clean Architecture with Unidir
 
 ---
 
-## 2. Dependency Injection Graph & Scope Lifetimes
+## 2. 401 Token Refresh & Mutex Lock Architecture
 
-The DI container manages the lifecycle of components across 3 distinct scopes:
+When multiple concurrent HTTP requests receive a `401 Unauthorized` simultaneously, the OkHttp `TokenAuthenticator` coordinates with a Coroutine `Mutex` to guarantee that **only one refresh HTTP request** is dispatched to the backend:
 
 ```mermaid
-graph TD
-    App["Application Scope (single / @Singleton)"]
-    App --> DP["DispatcherProvider (StandardDispatcherProvider)"]
-    App --> LDS["TransactionLocalDataSource (InMemoryTransactionLocalDataSource)"]
-    App --> ER["ExpenseRepository (ExpenseRepositoryImpl)"]
-    App --> PR["PortfolioRepository (PortfolioRepositoryImpl)"]
+sequenceDiagram
+    autonumber
+    actor UI as UI Requests
+    participant OkHttp as OkHttp Client
+    participant Auth as TokenAuthenticator (Mutex)
+    participant Cloud as Backend Auth Service
 
-    Sub["Execution Scope (factory / Transient)"]
-    Sub --> UC1["GetTransactionsUseCase"]
-    Sub --> UC2["GetTransactionDetailUseCase"]
-    Sub --> UC3["AddTransactionUseCase"]
-    Sub --> UC4["DeleteTransactionUseCase"]
-    Sub --> UC5["GetPortfolioSummaryUseCase"]
-    Sub --> UC6["FilterTransactionsUseCase"]
+    par Concurrent Requests
+        UI->>OkHttp: Request A (Expired Token)
+        UI->>OkHttp: Request B (Expired Token)
+    end
+    OkHttp->>Cloud: Request A & B sent
+    Cloud-->>OkHttp: 401 Unauthorized (A & B)
 
-    Screen["Screen Lifecycle Scope (viewModelOf / @ViewModelScoped)"]
-    Screen --> DVM["DashboardViewModel"]
-    Screen --> TVM["TransactionListMviViewModel"]
+    Note over OkHttp,Auth: Authenticator intercepts 401
+    OkHttp->>Auth: authenticate(Request A)
+    Auth->>Auth: Acquires Mutex.withLock
+    Auth->>Cloud: POST /v1/auth/refresh (RefreshToken)
+    Cloud-->>Auth: 200 OK (New Access Token)
+    Auth->>Auth: Updates TokenManager
+    Auth-->>OkHttp: Retries Request A with New Token (Success)
+
+    OkHttp->>Auth: authenticate(Request B)
+    Auth->>Auth: Detects token already refreshed!
+    Auth-->>OkHttp: Retries Request B with New Token directly without second refresh call (Success)
 ```
 
 ---
 
-## 3. Dependency Injection Framework Tradeoffs: Hilt vs Koin
+## 3. The 6 Canonical Network Failure Paths
 
-| Dimension | Hilt (Dagger) | Koin (Kotlin DSL) | Our Choice in Stage 6 |
-|---|---|---|---|
-| **Mechanism** | Compile-time code generation via KSP / Java annotation processor. | Runtime Service Locator with lightweight Kotlin DSL reflection. | **Koin** (Pure Kotlin, zero annotation processing build overhead). |
-| **Build Speed** | Slower (adds KSP / kapt compile steps). | **Fast** (zero code generation during builds). | Koin provides instant incremental builds. |
-| **Compile-Time Safety** | 100% compile-time graph verification. | Runtime verification (requires `checkModules()` test suite). | We write automated `AppModuleCheckTest` to ensure 100% graph safety. |
-| **Kotlin Multiplatform (KMP)**| Android/JVM only. | **First-class KMP support** (Android, iOS, Desktop, Web). | Koin makes the Domain and Data layers portable to iOS. |
-| **Boilerplate** | High (`@Inject`, `@Module`, `@InstallIn`, `@Binds`, `@Provides`). | **Minimal** (`singleOf`, `viewModelOf`, `factoryOf`). | Concise and clean. |
+Every network operation passes through `safeApiCall` which intercepts low-level transport exceptions and translates them into domain failure states:
+
+1. **`401 Unauthorized`** ➔ `FinancialResult.Failure.Unauthorized` (triggers re-auth or login flow).
+2. **`404 Not Found`** ➔ `FinancialResult.Failure.ValidationError` (resource not found on server).
+3. **`500+ Server Error`** ➔ `FinancialResult.Failure.UnexpectedError` (remote service degraded).
+4. **`SocketTimeoutException`** ➔ `FinancialResult.Failure.NetworkError` (slow link, unfulfilled SLA).
+5. **`UnknownHostException`** ➔ `FinancialResult.Failure.NetworkError` (device offline / DNS failure).
+6. **`SerializationException`** ➔ `FinancialResult.Failure.UnexpectedError` (client/server contract mismatch).

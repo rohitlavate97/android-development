@@ -181,3 +181,36 @@
 - **Consequences & Tradeoffs**:
   - *Pros*: Optimal memory usage and deterministic lifecycles.
   - *Cons*: Requires deliberate choice of `singleOf` vs `factoryOf` during module registration.
+
+---
+
+## ADR 018: Use `kotlinx.serialization` with `ignoreUnknownKeys = true`
+
+- **Status**: Accepted
+- **Context**: Gson and Jackson use slow reflection, lack Kotlin null-safety guarantees, and crash when backend services add new unexpected JSON fields.
+- **Decision**: Standardize on `kotlinx.serialization` with `ignoreUnknownKeys = true` and `coerceInputValues = true`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Fast compile-time generated serializers, zero reflection, safe evolution of backend APIs.
+  - *Cons*: Requires applying `@Serializable` and `@SerialName` annotations on all DTOs.
+
+---
+
+## ADR 019: Mutex-Protected Token Refresh in OkHttp `Authenticator`
+
+- **Status**: Accepted
+- **Context**: When a JWT token expires, 5 parallel requests receive 401s simultaneously. Without synchronization, the app dispatches 5 duplicate token refresh requests, causing race conditions and session revocation.
+- **Decision**: Wrap the refresh operation in a Coroutine `Mutex.withLock` inside `TokenAuthenticator`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Exactly ONE refresh request is executed; subsequent pending requests reuse the refreshed token.
+  - *Cons*: Requires thread blocking (`runBlocking`) inside OkHttp's synchronous `Authenticator` callback.
+
+---
+
+## ADR 020: Explicit 6-Path Network Error Taxonomy
+
+- **Status**: Accepted
+- **Context**: Catching generic `IOException` and displaying "Network Error" prevents users and engineers from knowing if the issue is an expired token (401), missing resource (404), server crash (500), DNS failure (offline), or slow link (timeout).
+- **Decision**: Classify all network failures into 6 distinct paths: `401 Unauthorized`, `404 Not Found`, `500 Server Error`, `Timeout`, `No Internet`, and `Malformed JSON`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Clear UI error states (e.g. "Retry" vs "Log in again" vs "Check connection").
+  - *Cons*: Requires comprehensive mapping logic in `safeApiCall`.

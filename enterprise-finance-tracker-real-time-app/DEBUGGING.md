@@ -178,3 +178,23 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 * 💡 **Hint 1**: What is the lifespan of a `single` definition vs a `viewModelOf` definition?
 * 💡 **Hint 2**: Read ADR 017 on scope lifetimes.
 * ✅ **Solution**: Change `single` to `viewModelOf(::TransactionListMviViewModel)` so the ViewModel lifecycle is scoped to the screen composable and destroyed when dismissed.
+
+---
+
+## 🎯 Stage 7 Debugging Challenges (Networking & Interceptors)
+
+### Challenge 14: The 401 Token Refresh Storm (Thundering Herd)
+* **Symptom**: When a user's access token expires, the dashboard makes 4 concurrent API calls (`/user`, `/transactions`, `/portfolio`, `/notifications`). The backend receives 4 refresh requests simultaneously with the same refresh token, triggers its "Token Reuse Detection" security rule, and logs the user out.
+* **Question for QA Engineer**: *Why did 4 parallel requests trigger 4 token refresh calls, and how does a Coroutines Mutex in OkHttp Authenticator fix this?*
+* 💡 **Hint 1**: OkHttp `Authenticator` is called on multiple background threads concurrently.
+* 💡 **Hint 2**: Read ADR 019 on Mutex-protected token refresh.
+* ✅ **Solution**: Use `Mutex.withLock` inside `TokenAuthenticator` and verify if `response.request.header("Authorization") != tokenManager.accessToken` before dispatching a new refresh call.
+
+---
+
+### Challenge 15: Serialization Mismatch on Unexpected Server Fields
+* **Symptom**: A backend team releases an update adding `"geo_location": {"lat": 37.77, "lng": -122.41}` to the transaction response JSON. All Android clients immediately crash with `SerializationException: Field 'geo_location' is not known`.
+* **Question for QA Engineer**: *Why does Kotlinx Serialization reject unknown fields by default, and how do you configure it for backward-compatible evolution?*
+* 💡 **Hint 1**: Strict schema validation vs lenient parsing.
+* 💡 **Hint 2**: Read ADR 018.
+* ✅ **Solution**: Configure `Json { ignoreUnknownKeys = true; coerceInputValues = true; isLenient = true }`.
