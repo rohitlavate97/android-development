@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Enterprise Finance Tracker</string>
+    <string name="welcome_message">Welcome to Enterprise Finance Tracker</string>
+    <string name="status_ready">System Ready</string>
+</resources>

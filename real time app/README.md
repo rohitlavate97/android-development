@@ -18,11 +18,9 @@
 
 ## 🗺️ Architectural Evolution Roadmap (13 Stages)
 
-Unlike traditional tutorials that dump 20 modules and full frameworks upfront, this application evolves organically across 13 distinct stages:
-
 ```mermaid
 graph TD
-    S01["Stage 1: Pure Kotlin Domain Foundation"] --> S02["Stage 2: Android Platform & Build Fundamentals"]
+    S01["Stage 1: Pure Kotlin Domain Foundation ✅"] --> S02["Stage 2: Android Platform & Build Fundamentals ✅"]
     S02 --> S03["Stage 3: Jetpack Compose UI (3-Layer Screens)"]
     S03 --> S04["Stage 4: Coroutines, Flow & Concurrency Engine"]
     S04 --> S05["Stage 5: Clean Architecture (UDF, UseCases, SSOT)"]
@@ -34,6 +32,9 @@ graph TD
     S10 --> S11["Stage 11: Modularization (:app, :core:*, :feature:*-api/-impl)"]
     S11 --> S12["Stage 12: Production Quality (StrictMode, Profiler, Baseline Profiles)"]
     S12 --> S13["Stage 13: Release Engineering & Incident Response Playbook"]
+
+    style S01 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style S02 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---
@@ -49,5 +50,5 @@ graph TD
 
 ## 📍 Current Status
 
-- **Current Stage**: **Stage 1 — Kotlin Domain Foundation**
-- **Artifacts Built**: Pure Kotlin Domain Entities, Value Classes, Sealed Types, Business Invariant Validation, Domain Unit Test Suite.
+- **Current Stage**: **Stage 2 Completed — Android Platform Fundamentals**
+- **Artifacts Built**: Android Gradle build configuration, `libs.versions.toml`, `AndroidManifest.xml`, `EnterpriseFinanceApp` (with StrictMode), `MainActivity` (with lifecycle logging & `onSaveInstanceState`), XML resources (`strings.xml`, `colors.xml`, `themes.xml`), Pure Kotlin domain entities & tests.

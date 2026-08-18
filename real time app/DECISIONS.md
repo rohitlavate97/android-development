@@ -43,3 +43,25 @@
 - **Consequences & Tradeoffs**:
   - *Pros*: Clear mastery of foundational mechanics before abstracting with frameworks.
   - *Cons*: Requires intentional refactoring steps between stages (which mirrors real-world enterprise codebase evolution).
+
+---
+
+## ADR 005: Enforce StrictMode Policy in Debug Builds
+
+- **Status**: Accepted
+- **Context**: Accidental disk reads/writes or network calls on the Main thread cause frame drops and Application Not Responding (ANR) dialogs.
+- **Decision**: Initialize Android `StrictMode` inside `EnterpriseFinanceApp.onCreate()` when `BuildConfig.DEBUG` is true.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Catches main-thread violations immediately in development with Logcat penalties.
+  - *Cons*: Must be disabled in release builds to avoid crashing or penalizing production users.
+
+---
+
+## ADR 006: State Preservation via `onSaveInstanceState` / `SavedStateHandle`
+
+- **Status**: Accepted
+- **Context**: Android kills background apps when RAM is low. Storing user state only in memory fields causes data loss upon process recreation.
+- **Decision**: All critical transient navigation and form state must be saved to the saved state bundle / `SavedStateHandle`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: 100% resilient across screen rotations and low-memory OS kills.
+  - *Cons*: Saved bundles are limited to ~500KB (TransactionTooLargeException if misuse).
