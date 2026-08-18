@@ -286,7 +286,7 @@
 ## ADR 027: Prefer In-Memory Fakes over Mocking Frameworks in Architecture Tests
 
 - **Status**: Accepted
-- **Context**: Using Mockito/MockK to mock repositories creates brittle tests that break whenever internal method call order or signature changes (`verify(repo).fetch()`).
+- **Context**: Using Mockito/MockK to mock repositories creates brittle tests that break whenever internal method call order or signature changes.
 - **Decision**: Write lightweight in-memory `Fake*Repository` implementations using `MutableStateFlow`.
 - **Consequences & Tradeoffs**:
   - *Pros*: Tests execute realistic state mutations; refactor-proof; fast JVM execution without reflection.
@@ -308,8 +308,41 @@
 ## ADR 029: Test Compose UI via Stateless Screen Contracts & Semantics
 
 - **Status**: Accepted
-- **Context**: Testing Compose screens with tight ViewModel coupling requires spinning up Android instrumentation runners or mocking ViewModels.
+- **Context**: Testing Compose screens with tight ViewModel coupling requires spinning up Android instrumentation runners.
 - **Decision**: Because screens follow the 3-Layer Pattern (`*Route` -> `*Screen`), unit test the stateless `*Screen` functions and UI logic using pure JVM tests.
 - **Consequences & Tradeoffs**:
   - *Pros*: Sub-second test execution on JVM; tests pure UI rendering logic and form validation.
   - *Cons*: Does not verify actual OpenGL pixels (reserved for screenshot testing).
+
+---
+
+## ADR 030: Multi-Module Layered Topology (`:app`, `:core:*`, `:feature:*`)
+
+- **Status**: Accepted
+- **Context**: A single monolithic `:app` module causes long incremental build times, allows unrestricted coupling between features, and prevents parallel compilation.
+- **Decision**: Split codebase into 9 decoupled modules: `:app`, `:core:common`, `:core:model`, `:core:database`, `:core:network`, `:core:designsystem`, `:feature:dashboard`, `:feature:transactions`, `:feature:analytics`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Blazing fast parallel build times, enforced architectural boundaries, high team scalability.
+  - *Cons*: Requires managing multiple `build.gradle.kts` files and Version Catalog dependencies.
+
+---
+
+## ADR 031: Strict `api` vs `implementation` Encapsulation
+
+- **Status**: Accepted
+- **Context**: Using `api` indiscriminately leaks transitive dependencies and forces downstream modules to recompile whenever an internal dependency changes.
+- **Decision**: Default to `implementation`. Use `api` exclusively for core domain models (`:core:model`) that must cross module boundaries.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Maximum compile avoidance and minimal recompilation times across Gradle builds.
+  - *Cons*: Requires intentional declaration of dependencies per module.
+
+---
+
+## ADR 032: Strict Feature Module Isolation (Zero Horizontal Dependencies)
+
+- **Status**: Accepted
+- **Context**: Having `:feature:dashboard` depend on `:feature:transactions` creates spaghetti dependency graphs and circular build cycles.
+- **Decision**: Feature modules must NEVER depend on each other. All feature navigation is orchestrated centrally in `:app` via type-safe routes.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Zero circular dependency risks; features can be built, tested, and deleted independently.
+  - *Cons*: Shared feature components must be hoisted to `:core:designsystem` or `:core:model`.

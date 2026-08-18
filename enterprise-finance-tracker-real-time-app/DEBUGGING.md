@@ -262,3 +262,23 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 * 💡 **Hint 1**: `StandardTestDispatcher` queues coroutines on a virtual clock scheduler.
 * 💡 **Hint 2**: Read ADR 010 and ADR 028.
 * ✅ **Solution**: Use `StandardTestDispatcher()` and explicitly advance time with `testDispatcher.scheduler.advanceUntilIdle()`.
+
+---
+
+## 🎯 Stage 11 Debugging Challenges (Multi-Module Architecture)
+
+### Challenge 22: Circular Module Dependency Cycle
+* **Symptom**: A developer in `:feature:transactions` adds a direct dependency `implementation(project(":feature:dashboard"))` to navigate to the dashboard, and a developer in `:feature:dashboard` adds `implementation(project(":feature:transactions"))`. Gradle build fails immediately with `Circular dependency between the following projects: :feature:transactions -> :feature:dashboard -> :feature:transactions`.
+* **Question for QA Engineer**: *Why are circular dependencies forbidden in Gradle, and how does the mediator pattern in `:app` solve it?*
+* 💡 **Hint 1**: Gradle builds DAG (Directed Acyclic Graphs). Cycles cannot be resolved topologically.
+* 💡 **Hint 2**: Read ADR 032 on feature module isolation.
+* ✅ **Solution**: Remove horizontal dependencies between feature modules. Keep feature modules completely isolated and orchestrate cross-feature navigation centrally inside `:app`.
+
+---
+
+### Challenge 23: Transitive Classpath Leakage via `api`
+* **Symptom**: Module `:core:database` exposes Room runtime via `api(libs.androidx.room.runtime)`. A developer in `:feature:dashboard` starts writing raw SQLite queries directly in the UI layer without using the Repository interface.
+* **Question for QA Engineer**: *Why is leaking low-level persistence libraries into UI feature modules dangerous for clean architecture?*
+* 💡 **Hint 1**: `api` puts dependencies on the compile classpath of all consumer modules.
+* 💡 **Hint 2**: Read ADR 031 on `api` vs `implementation`.
+* ✅ **Solution**: Change `api` to `implementation(libs.androidx.room.runtime)` in `:core:database`. This hides Room annotations and classes from feature modules at compile-time.

@@ -1,12 +1,6 @@
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -20,3 +14,13 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "enterprise-finance-tracker"
+
+include(":app")
+include(":core:common")
+include(":core:model")
+include(":core:database")
+include(":core:network")
+include(":core:designsystem")
+include(":feature:dashboard")
+include(":feature:transactions")
+include(":feature:analytics")

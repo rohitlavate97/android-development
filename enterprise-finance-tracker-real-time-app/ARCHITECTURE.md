@@ -1,72 +1,31 @@
 # Architecture Blueprint — Enterprise Finance Tracker
 
-## 1. High-Level Target Architecture
+## 1. Multi-Module Topology & Responsibilities
 
-The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)** powered by Type-Safe Navigation:
+The application is structured into **9 decoupled Gradle subprojects** adhering to clean architectural boundaries:
 
-```
-┌────────────────────────────────────────────────────────┐
-│               Type-Safe Navigation-Compose             │
-│        (FinanceNavHost with Animated Transitions)      │
-│                                                        │
-│   ┌─────────────────────┐       ┌──────────────────┐   │
-│   │ AuthGraph           │       │ MainGraph        │   │
-│   │ • LoginDestination  │──────►│ • DashboardDest  │   │
-│   │ (Cleared on Login)  │PopUpTo│ • TxListDest     │   │
-│   └─────────────────────┘       │ • TxDetail(id)   │   │
-│                                 └──────────────────┘   │
-└──────────────────────────┬─────────────────────────────┘
-                           │ (Collects StateFlow)
-┌──────────────────────────▼─────────────────────────────┐
-│                            ViewModel Layer             │
-│   • DashboardViewModel & TransactionListMviViewModel   │
-└──────────────────────────┬─────────────────────────────┘
-                           │ (Calls UseCases)
-┌──────────────────────────▼─────────────────────────────┐
-│                      Domain Layer                      │
-│   • Use Cases (operator fun invoke())                  │
-└──────────────────────────▲─────────────────────────────┘
-                           │ (Implemented in Data)
-┌──────────────────────────┴─────────────────────────────┐
-│                 Data Layer (Offline-First SSOT)         │
-│   • Room Database (SQLite SSOT)                        │
-│   • Retrofit Remote Sync & OkHttp 401 Mutex            │
-└────────────────────────────────────────────────────────┘
-```
+| Module | Type | Responsibilities | Key Dependencies |
+|---|---|---|---|
+| **`:app`** | Application | Aggregates all feature & core modules. Hosts `EnterpriseFinanceApp`, `MainActivity`, `FinanceNavHost`, and Koin DI graph bootstrapping. | `:feature:*`, `:core:*` |
+| **`:feature:dashboard`** | Feature | Net Worth summary, liquid vs investment allocation cards, portfolio holdings list. | `:core:model`, `:core:designsystem`, `:core:database` |
+| **`:feature:transactions`**| Feature | Transaction search list, category filters, detail screen, MVI state reducer. | `:core:model`, `:core:designsystem`, `:core:database` |
+| **`:feature:analytics`** | Feature | Spending trend analysis, monthly budget adherence progress bars. | `:core:model`, `:core:designsystem`, `:core:database` |
+| **`:core:designsystem`** | Core | Material 3 Theme tokens (`Color`, `Type`, `Theme`), atomic UI atoms (`CategoryBadge`, `AmountDisplay`, `EmptyStateWidget`). | `:core:model` |
+| **`:core:database`** | Core | Room SQLite Database (`FinanceDatabase`), DAOs, Entities, TypeConverters, `UserPreferencesDataStore`. | `:core:model`, `:core:common` |
+| **`:core:network`** | Core | Retrofit `FinanceApiService`, OkHttp Client, 401 Mutex `TokenAuthenticator`, 6-path `safeApiCall`. | `:core:model`, `:core:common` |
+| **`:core:model`** | Core | Pure Kotlin Domain Entities (`Transaction`, `Account`, `Budget`, `Portfolio`), value classes, `FinancialResult`. | *None (Zero Android SDK dependencies)* |
+| **`:core:common`** | Core | `DispatcherProvider`, `safeSuspendCall` with `CancellationException` preservation. | `kotlinx-coroutines-core` |
 
 ---
 
-## 2. Navigation Graph Hierarchy & Backstack Flow
+## 2. Compile Avoidance & `api` vs `implementation` Rules
 
-```mermaid
-graph TD
-    Root["FinanceNavHost (start: AuthGraph)"]
-    
-    subgraph AuthGraph ["AuthGraph (Nested)"]
-        Login["LoginDestination"]
-    end
-    
-    subgraph MainGraph ["MainGraph (Nested)"]
-        Dashboard["DashboardDestination"]
-        TxList["TransactionListDestination"]
-        TxDetail["TransactionDetailDestination(transactionId: String)"]
-    end
-    
-    Root --> AuthGraph
-    Login -->|"Login Success (popUpTo AuthGraph inclusive=true)"| Dashboard
-    Dashboard -->|"View All"| TxList
-    Dashboard -->|"Click Transaction Item"| TxDetail
-    TxList -->|"Click Transaction Item"| TxDetail
-    TxDetail -->|"Done / Delete"| TxList
-    
-    DeepLink["Deep Link: https://financetracker.enterprise.com/transactions/{id}"] -->|Direct Launch| TxDetail
-```
-
----
-
-## 3. Deep Linking Verification Workflow
-
-1. An external app or push notification dispatches an `ACTION_VIEW` intent with URL `https://financetracker.enterprise.com/transactions/tx_100`.
-2. The Android OS inspects `AndroidManifest.xml` intent-filter with `android:autoVerify="true"`.
-3. `MainActivity` receives the intent. `Navigation-Compose` matches the URL against `navDeepLink<TransactionDetailDestination>`.
-4. The router automatically deserializes `destination.transactionId` and navigates directly to `TransactionDetailDestination`, pushing `DashboardDestination` into the synthetic backstack so the Back button returns to the home screen.
+1. **`implementation` (Default)**:
+   - Dependencies are **internal** to the module and NOT exposed to consumers on the compile classpath.
+   - *Advantage*: When an implementation dependency changes, Gradle ONLY recompiles that single module, avoiding downstream cascade recompilations.
+2. **`api` (Public Contract)**:
+   - Used sparingly for shared foundational types (e.g. `:core:model` inside `:core:database` and `:core:network`).
+   - Consumers automatically inherit the public contract without manually declaring it.
+3. **Feature Module Isolation (No Horizontal Dependencies)**:
+   - `:feature:dashboard` NEVER depends on `:feature:transactions`.
+   - Feature communication is orchestrated strictly via `:app` type-safe navigation routes and deep links.

@@ -29,7 +29,7 @@ graph TD
     S07 --> S08["Stage 8: Offline-First Persistence (Room, DataStore) ✅"]
     S08 --> S09["Stage 9: Type-Safe Navigation & Deep Links ✅"]
     S09 --> S10["Stage 10: Complete Test Pyramid (Turbine, Fakes, Compose UI) ✅"]
-    S10 --> S11["Stage 11: Modularization (:app, :core:*, :feature:*-api/-impl)"]
+    S10 --> S11["Stage 11: Modularization (:app, :core:*, :feature:*-api/-impl) ✅"]
     S11 --> S12["Stage 12: Production Quality (StrictMode, Profiler, Baseline Profiles)"]
     S12 --> S13["Stage 13: Release Engineering & Incident Response Playbook"]
 
@@ -43,27 +43,79 @@ graph TD
     style S08 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S09 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S10 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style S11 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+```
+
+---
+
+## 🏛️ Multi-Module Dependency Graph
+
+```mermaid
+graph TD
+    App[":app"]
+    
+    subgraph FeatureModules ["Feature Modules (Isolated)"]
+        FD[":feature:dashboard"]
+        FT[":feature:transactions"]
+        FA[":feature:analytics"]
+    end
+    
+    subgraph CoreModules ["Core Modules (Shared Foundation)"]
+        DS[":core:designsystem"]
+        CDB[":core:database"]
+        CNET[":core:network"]
+        CMOD[":core:model"]
+        CCOM[":core:common"]
+    end
+
+    App --> FD
+    App --> FT
+    App --> FA
+    App --> DS
+    App --> CDB
+    App --> CNET
+    App --> CMOD
+    App --> CCOM
+
+    FD --> DS
+    FD --> CMOD
+    FD --> CCOM
+    FD --> CDB
+
+    FT --> DS
+    FT --> CMOD
+    FT --> CCOM
+    FT --> CDB
+
+    FA --> DS
+    FA --> CMOD
+    FA --> CCOM
+    FA --> CDB
+
+    DS --> CMOD
+
+    CDB --> CMOD
+    CDB --> CCOM
+
+    CNET --> CMOD
+    CNET --> CCOM
 ```
 
 ---
 
 ## 📚 Living Project Documentation
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — Architectural blueprint, layer definitions, data flow, and evolution plan.
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — Architectural blueprint, module topology, `api` vs `implementation` encapsulation, and build optimization mechanics.
 - **[DECISIONS.md](DECISIONS.md)** — Architecture Decision Records (ADRs) with rationale, alternatives, and tradeoffs.
 - **[DEBUGGING.md](DEBUGGING.md)** — Bug investigation logs, root cause analyses, and debugging challenges.
-- **[TESTING.md](TESTING.md)** — Testing strategy, test pyramid breakdown, Given-When-Then test specs, and execution guidelines.
+- **[TESTING.md](TESTING.md)** — Testing strategy, test pyramid breakdown, and parallel multi-module execution guidelines.
 
 ---
 
 ## 📍 Current Status
 
-- **Current Stage**: **Stage 10 Completed — Complete Test Pyramid**
+- **Current Stage**: **Stage 11 Completed — Gradle & Multi-Module Architecture**
 - **Artifacts Built**:
-  - **Level 1 (Domain Unit Tests)**: `TransactionValidationTest`, `InvestmentPortfolioTest`, `UseCasesTest` with Fakes.
-  - **Level 2 (Data Boundary & Mappers)**: `DataMapperTest`, `EntityMapperTest`.
-  - **Level 3 (Networking & Failure Paths)**: `MockWebServerFailurePathsTest` (200, 401, 404, 500, Timeout, Malformed JSON).
-  - **Level 4 (Persistence & SSOT)**: `OfflineFirstExpenseRepositoryTest` verifying reactive invalidation.
-  - **Level 5 (ViewModels & Concurrency)**: `DashboardViewModelTest`, `TransactionListMviViewModelTest`, `TransactionFlowTest`, `SafeSuspendCallTest` with Turbine virtual time.
-  - **Level 6 (Navigation & UI Logic)**: `NavigationDestinationSerializationTest`, `StatelessScreenLogicTest`.
-  - **Level 7 (DI Verification)**: `AppModuleCheckTest`.
+  - **Module Topology**: Refactored monolithic codebase into 9 decoupled Gradle modules (`:app`, `:core:common`, `:core:model`, `:core:database`, `:core:network`, `:core:designsystem`, `:feature:dashboard`, `:feature:transactions`, `:feature:analytics`).
+  - **Encapsulation Rules**: Strict `api` vs `implementation` boundaries; domain entities exposed via `api(project(":core:model"))`, network DTOs and database internals isolated via `implementation`.
+  - **Compile Avoidance**: Feature modules are completely isolated from each other (e.g. editing `:feature:dashboard` never triggers recompilation of `:feature:transactions`).
