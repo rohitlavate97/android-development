@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -17,6 +18,12 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+            arg("room.incremental", "true")
+            arg("room.expandProjection", "true")
+        }
     }
 
     buildTypes {
@@ -68,6 +75,12 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
 
+    // Local Persistence (Room + DataStore)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.datastore.preferences)
+
     // Koin Dependency Injection
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
@@ -88,4 +101,5 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.koin.test)
     testImplementation(libs.mockwebserver)
+    testImplementation(libs.androidx.room.testing)
 }

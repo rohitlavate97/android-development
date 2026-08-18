@@ -2,7 +2,7 @@
 
 ## 1. High-Level Target Architecture
 
-The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)** powered by Dependency Injection and Resilient Networking:
+The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)** powered by Offline-First Single Source of Truth (SSOT):
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -21,56 +21,52 @@ The application implements Google's recommended **Clean Architecture with Unidir
 └──────────────────────────▲─────────────────────────────┘
                            │ (singleOf(::RepositoryImpl) bind Repository::class)
 ┌──────────────────────────┴─────────────────────────────┐
-│                       Data Layer                       │
-│   Repository Implementations (SSOT)                    │
-│   Local DataSource          │      Remote DataSource   │
-│   (InMemory / Room DB)      │    (Retrofit + OkHttp)   │
-└────────────────────────────────────────────────────────┘
+│                 Data Layer (Offline-First SSOT)         │
+│   Repository Implementation (OfflineFirstExpenseRepo)  │
+│                                                        │
+│   ┌─────────────────────┐       ┌──────────────────┐   │
+│   │ Room Database (SSOT)│◄──────│ Remote DataSource│   │
+│   │ (SQLite + DataStore)│ (Sync)│(Retrofit + OkHttp│   │
+│   └──────────┬──────────┘       └──────────────────┘   │
+└──────────────┼─────────────────────────────────────────┘
+               │ (UI observes Room exclusively via Flow)
 ```
 
 ---
 
-## 2. 401 Token Refresh & Mutex Lock Architecture
+## 2. The Offline-First SSOT Reactive Loop
 
-When multiple concurrent HTTP requests receive a `401 Unauthorized` simultaneously, the OkHttp `TokenAuthenticator` coordinates with a Coroutine `Mutex` to guarantee that **only one refresh HTTP request** is dispatched to the backend:
+Under this architecture, the UI **NEVER** observes the network directly. The local SQLite database is the Single Source of Truth:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor UI as UI Requests
-    participant OkHttp as OkHttp Client
-    participant Auth as TokenAuthenticator (Mutex)
-    participant Cloud as Backend Auth Service
+    actor UI as Compose UI / ViewModel
+    participant Repo as OfflineFirstExpenseRepository
+    participant DB as Room SQLite Database
+    participant Remote as Remote API (Retrofit)
 
-    par Concurrent Requests
-        UI->>OkHttp: Request A (Expired Token)
-        UI->>OkHttp: Request B (Expired Token)
-    end
-    OkHttp->>Cloud: Request A & B sent
-    Cloud-->>OkHttp: 401 Unauthorized (A & B)
+    UI->>Repo: observeTransactions()
+    Repo->>DB: Query observeAllWithCategory() [Flow]
+    DB-->>UI: Emits cached transactions immediately (<10ms)
 
-    Note over OkHttp,Auth: Authenticator intercepts 401
-    OkHttp->>Auth: authenticate(Request A)
-    Auth->>Auth: Acquires Mutex.withLock
-    Auth->>Cloud: POST /v1/auth/refresh (RefreshToken)
-    Cloud-->>Auth: 200 OK (New Access Token)
-    Auth->>Auth: Updates TokenManager
-    Auth-->>OkHttp: Retries Request A with New Token (Success)
+    Note over Repo,Remote: Background Sync Triggered
+    Repo->>Remote: fetchTransactions()
+    Remote-->>Repo: 200 OK (Fresh JSON payload)
+    Repo->>DB: insertAll(newTransactions) [Room Transaction]
 
-    OkHttp->>Auth: authenticate(Request B)
-    Auth->>Auth: Detects token already refreshed!
-    Auth-->>OkHttp: Retries Request B with New Token directly without second refresh call (Success)
+    Note over DB,UI: Room detects table change via InvalidationTracker
+    DB-->>UI: Automatically emits updated transaction list via Flow!
 ```
 
 ---
 
-## 3. The 6 Canonical Network Failure Paths
+## 3. Data Storage Technology Comparison
 
-Every network operation passes through `safeApiCall` which intercepts low-level transport exceptions and translates them into domain failure states:
-
-1. **`401 Unauthorized`** ➔ `FinancialResult.Failure.Unauthorized` (triggers re-auth or login flow).
-2. **`404 Not Found`** ➔ `FinancialResult.Failure.ValidationError` (resource not found on server).
-3. **`500+ Server Error`** ➔ `FinancialResult.Failure.UnexpectedError` (remote service degraded).
-4. **`SocketTimeoutException`** ➔ `FinancialResult.Failure.NetworkError` (slow link, unfulfilled SLA).
-5. **`UnknownHostException`** ➔ `FinancialResult.Failure.NetworkError` (device offline / DNS failure).
-6. **`SerializationException`** ➔ `FinancialResult.Failure.UnexpectedError` (client/server contract mismatch).
+| Criteria | Room SQLite | Preferences DataStore | Legacy SharedPreferences |
+|---|---|---|---|
+| **Data Type** | Relational, complex queries, multi-table joins. | Key-Value primitive pairs (settings, flags). | Key-Value primitive pairs. |
+| **Threading** | Main-safety enforced; queries run off-thread via Flow/suspend. | 100% Asynchronous via Kotlin Coroutines / Flow. | Synchronous disk I/O on UI thread (causes ANRs). |
+| **Error Handling** | Compile-time SQL validation + try/catch. | Catches `IOException` safely. | Silently fails or crashes. |
+| **Reactive Support**| Native `Flow<List<T>>` invalidation streams. | Native `Flow<Preferences>` updates. | Requires manual `OnSharedPreferenceChangeListener`. |
+| **Use Case in App** | Transactions, Accounts, Categories, Portfolio. | Currency symbol, Biometric lock, Last Sync Time. | **DEPRECATED — NEVER USE**. |

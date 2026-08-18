@@ -198,3 +198,23 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 * 💡 **Hint 1**: Strict schema validation vs lenient parsing.
 * 💡 **Hint 2**: Read ADR 018.
 * ✅ **Solution**: Configure `Json { ignoreUnknownKeys = true; coerceInputValues = true; isLenient = true }`.
+
+---
+
+## 🎯 Stage 8 Debugging Challenges (Local Persistence & Room)
+
+### Challenge 16: The `IllegalStateException: Room cannot verify data integrity`
+* **Symptom**: A developer adds a new column `@ColumnInfo(name = "notes") val notes: String` to `TransactionEntity` and increments the `@Database(version = 2)`. App crashes immediately on launch with `IllegalStateException: Room cannot verify the data integrity. Looks like you've changed schema but forgot to update the build identity hash`.
+* **Question for QA Engineer**: *Why does Room crash on schema changes without migrations, and how do we resolve it safely?*
+* 💡 **Hint 1**: Room generates an identity hash in the `room_master_table` SQLite table.
+* 💡 **Hint 2**: Read ADR 023 on explicit migrations.
+* ✅ **Solution**: Provide an explicit `Migration(1, 2)` executing `ALTER TABLE transactions ADD COLUMN notes TEXT DEFAULT ''` and attach it via `.addMigrations(MIGRATION_1_2)`.
+
+---
+
+### Challenge 17: Main Thread Database Query Violation
+* **Symptom**: A developer calls `val tx = database.transactionDao().getByIdSync("tx_1")` directly from a Composable onClick lambda. Debug builds immediately crash with `IllegalStateException: Cannot access database on the main thread since it may potentially lock the UI for a long period of time`.
+* **Question for QA Engineer**: *Why does Room strictly forbid main thread queries, and how do Kotlin Coroutines `suspend` and `Flow` solve it automatically?*
+* 💡 **Hint 1**: Disk I/O latency ranges from 5ms to 500ms; Android frames must render in 16.6ms.
+* 💡 **Hint 2**: Suspend functions and Flow in Room offload queries to background threads automatically.
+* ✅ **Solution**: Mark DAO functions as `suspend` or return `Flow<T>`, and call them inside `viewModelScope.launch(dispatchers.io)`.

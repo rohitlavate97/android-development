@@ -214,3 +214,36 @@
 - **Consequences & Tradeoffs**:
   - *Pros*: Clear UI error states (e.g. "Retry" vs "Log in again" vs "Check connection").
   - *Cons*: Requires comprehensive mapping logic in `safeApiCall`.
+
+---
+
+## ADR 021: Local Room Database as Single Source of Truth (SSOT)
+
+- **Status**: Accepted
+- **Context**: Displaying data directly from network responses causes blank screens when offline, inconsistent caching, and screen flickering on network refreshes.
+- **Decision**: The UI observes ONLY the local Room database via reactive `Flow`. Remote API responses write strictly into Room.
+- **Consequences & Tradeoffs**:
+  - *Pros*: 100% offline-first functionality, instant UI load times (<10ms), automatic UI updates when database changes.
+  - *Cons*: Requires maintaining SQLite tables and database migration scripts.
+
+---
+
+## ADR 022: Adopt Jetpack Preferences DataStore over SharedPreferences
+
+- **Status**: Accepted
+- **Context**: `SharedPreferences` runs synchronous disk I/O on the UI thread causing frame drops/ANRs, lacks type safety, and crashes on unhandled `ClassCastException`.
+- **Decision**: Use `androidx.datastore:datastore-preferences` for lightweight key-value storage (currency, biometrics state, timestamps).
+- **Consequences & Tradeoffs**:
+  - *Pros*: 100% asynchronous Coroutines/Flow API, safe transactional writes, no UI thread blocking.
+  - *Cons*: Cannot read values synchronously without suspending or collecting Flow.
+
+---
+
+## ADR 023: Explicit Schema Migrations over Destructive Fallbacks
+
+- **Status**: Accepted
+- **Context**: Calling `fallbackToDestructiveMigration()` in production deletes all user financial records and transactions during app updates.
+- **Decision**: Provide explicit `Migration(from, to)` objects (e.g. `MIGRATION_1_2`) and export Room schemas to `/schemas` for automated CI schema verification.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Zero user data loss across production database upgrades.
+  - *Cons*: Requires writing manual SQL `ALTER TABLE` scripts for schema alterations.

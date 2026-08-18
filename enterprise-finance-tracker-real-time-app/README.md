@@ -26,7 +26,7 @@ graph TD
     S04 --> S05["Stage 5: Clean Architecture (UDF, UseCases, SSOT) ✅"]
     S05 --> S06["Stage 6: Dependency Injection (Koin & Hilt) ✅"]
     S06 --> S07["Stage 7: Resilient Networking (Retrofit, 401 Mutex, 6-path errors) ✅"]
-    S07 --> S08["Stage 8: Offline-First Persistence (Room, DataStore)"]
+    S07 --> S08["Stage 8: Offline-First Persistence (Room, DataStore) ✅"]
     S08 --> S09["Stage 9: Type-Safe Navigation & Deep Links"]
     S09 --> S10["Stage 10: Complete Test Pyramid (Turbine, Fakes, Compose UI)"]
     S10 --> S11["Stage 11: Modularization (:app, :core:*, :feature:*-api/-impl)"]
@@ -40,6 +40,7 @@ graph TD
     style S05 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S06 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S07 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style S08 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---
@@ -55,10 +56,11 @@ graph TD
 
 ## 📍 Current Status
 
-- **Current Stage**: **Stage 7 Completed — Resilient Networking (Retrofit, 401 Mutex Authenticator, 6-Path Error Taxonomy)**
+- **Current Stage**: **Stage 8 Completed — Local Persistence & Offline-First SSOT (Room + DataStore)**
 - **Artifacts Built**:
-  - **Retrofit & OkHttp Engine**: `FinanceApiService`, `NetworkClientFactory` with custom timeouts, logging, and Kotlinx Serialization.
-  - **Security & Token Management**: `AuthInterceptor` (attaches Bearer token) and `TokenAuthenticator` with Coroutines `Mutex` (prevents 401 refresh storms).
-  - **6 Canonical Failure Paths**: Explicit error mapping for `401 Unauthorized`, `404 Not Found`, `500 Server Error`, `SocketTimeout`, `NoInternet`, and `MalformedJson`.
-  - **Remote DataSource**: `RetrofitTransactionRemoteDataSource` executing calls via `safeApiCall`.
-  - **Automated MockWebServer Test Suite**: `MockWebServerFailurePathsTest` verifying all 6 failure paths in isolation.
+  - **Room SQLite Architecture**: `TransactionEntity`, `CategoryEntity`, `TransactionWithCategory` relations, indices, foreign keys.
+  - **DAOs & Type Converters**: `TransactionDao` (reactive Flow queries), `CategoryDao`, `FinanceTypeConverters`.
+  - **Schema Migrations**: Schema v1 with automated migration template `MIGRATION_1_2`.
+  - **Preferences DataStore**: `UserPreferencesDataStore` for base currency, biometrics state, and sync timestamps.
+  - **Single Source of Truth Repository**: `OfflineFirstExpenseRepositoryImpl` (UI reads strictly from Room, remote responses write into Room).
+  - **Automated SSOT Test Suite**: `OfflineFirstExpenseRepositoryTest` verifying reactive cache updates without polling.
