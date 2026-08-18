@@ -242,3 +242,23 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 * 💡 **Hint 1**: What happens during process recreation if a large object was serialized into the backstack bundle?
 * 💡 **Hint 2**: Read ADR 001 and Single Source of Truth (SSOT).
 * ✅ **Solution**: Pass ONLY the identifier `@Serializable data class TransactionDetailDestination(val transactionId: String)`. Let the target screen query the repository / SSOT database using the ID.
+
+---
+
+## 🎯 Stage 10 Debugging Challenges (Testing & Turbine)
+
+### Challenge 20: The Brittle Mock Verification Test Failure
+* **Symptom**: A developer refactors `GetTransactionsUseCase` to add an in-memory cache check before querying the repository. Unit tests immediately fail with `Wanted but not invoked: repository.observeTransactions()`.
+* **Question for QA Engineer**: *Why did a performance improvement break the unit tests, and how do In-Memory Fakes prevent brittle test failures?*
+* 💡 **Hint 1**: Mocks test *implementation details* (method calls). Fakes test *observable behavior* (state outputs).
+* 💡 **Hint 2**: Read ADR 027 on Fakes over Mocks.
+* ✅ **Solution**: Replace `mock(ExpenseRepository::class.java)` with `FakeExpenseRepository()`. Test that `useCase()` emits the expected data regardless of internal caching mechanics.
+
+---
+
+### Challenge 21: Flaky Virtual Time with `UnconfinedTestDispatcher`
+* **Symptom**: A developer uses `UnconfinedTestDispatcher` for testing a debounce operator (`debounce(300)`). The test sometimes finishes before virtual time advances, causing race conditions in CI.
+* **Question for QA Engineer**: *What is the difference between `StandardTestDispatcher` and `UnconfinedTestDispatcher` regarding scheduled delays?*
+* 💡 **Hint 1**: `StandardTestDispatcher` queues coroutines on a virtual clock scheduler.
+* 💡 **Hint 2**: Read ADR 010 and ADR 028.
+* ✅ **Solution**: Use `StandardTestDispatcher()` and explicitly advance time with `testDispatcher.scheduler.advanceUntilIdle()`.

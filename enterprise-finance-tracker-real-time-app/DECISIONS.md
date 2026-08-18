@@ -5,7 +5,7 @@
 ## ADR 001: Use `@JvmInline value class` for Domain Identifiers
 
 - **Status**: Accepted
-- **Context**: Passing primitive strings for IDs (e.g. `accountId: String`, `transactionId: String`, `categoryId: String`) creates catastrophic "primitive obsession" where parameters can be swapped in function calls without compile-time errors.
+- **Context**: Passing primitive strings for IDs creates catastrophic "primitive obsession" where parameters can be swapped in function calls without compile-time errors.
 - **Decision**: Wrap all domain entity identifiers in `@JvmInline value class` (e.g., `TransactionId`, `AccountId`, `CategoryId`, `TickerSymbol`).
 - **Consequences & Tradeoffs**:
   - *Pros*: Zero runtime heap allocation overhead on JVM, 100% compile-time type safety preventing ID transposition bugs.
@@ -16,7 +16,7 @@
 ## ADR 002: Enforce Business Invariants in Entity `init` Blocks
 
 - **Status**: Accepted
-- **Context**: Creating entities with invalid business states (e.g., negative expense amount, empty ticker symbol, progress > 100%) can propagate silently through repositories and crash the UI.
+- **Context**: Creating entities with invalid business states can propagate silently through repositories and crash the UI.
 - **Decision**: Enforce non-negotiable invariants directly inside entity `init` blocks using `require()`.
 - **Consequences & Tradeoffs**:
   - *Pros*: Impossible to create an invalid domain object anywhere in the application.
@@ -27,7 +27,7 @@
 ## ADR 003: Pure Kotlin Domain Layer (Zero Android Framework Imports)
 
 - **Status**: Accepted
-- **Context**: Coupling domain logic with Android SDK classes (`android.content.Context`, `android.os.Bundle`, `android.text.TextUtils`) makes unit tests slow (requiring Robolectric/Emulators) and breaks clean architecture.
+- **Context**: Coupling domain logic with Android SDK classes makes unit tests slow and breaks clean architecture.
 - **Decision**: The domain layer must remain pure Kotlin (`org.jetbrains.kotlin.*`, `kotlinx.datetime.*`, `kotlinx.coroutines.*`). Zero `android.*` imports.
 - **Consequences & Tradeoffs**:
   - *Pros*: Lightning-fast JVM unit test execution (<50ms), portable to Kotlin Multiplatform (KMP).
@@ -49,11 +49,11 @@
 ## ADR 005: Enforce StrictMode Policy in Debug Builds
 
 - **Status**: Accepted
-- **Context**: Accidental disk reads/writes or network calls on the Main thread cause frame drops and Application Not Responding (ANR) dialogs.
+- **Context**: Accidental disk reads/writes or network calls on the Main thread cause frame drops and ANR dialogs.
 - **Decision**: Initialize Android `StrictMode` inside `EnterpriseFinanceApp.onCreate()` when `BuildConfig.DEBUG` is true.
 - **Consequences & Tradeoffs**:
   - *Pros*: Catches main-thread violations immediately in development with Logcat penalties.
-  - *Cons*: Must be disabled in release builds to avoid crashing or penalizing production users.
+  - *Cons*: Must be disabled in release builds to avoid crashing production users.
 
 ---
 
@@ -64,7 +64,7 @@
 - **Decision**: All critical transient navigation and form state must be saved to the saved state bundle / `SavedStateHandle`.
 - **Consequences & Tradeoffs**:
   - *Pros*: 100% resilient across screen rotations and low-memory OS kills.
-  - *Cons*: Saved bundles are limited to ~500KB (TransactionTooLargeException if misused).
+  - *Cons*: Saved bundles are limited to ~500KB.
 
 ---
 
@@ -107,7 +107,7 @@
 ## ADR 011: Expose UI State with `SharingStarted.WhileSubscribed(5_000)`
 
 - **Status**: Accepted
-- **Context**: Using `SharingStarted.Eagerly` or `Lazily` keeps upstream cold Flows (e.g. database/location/live stock tickers) active indefinitely even when the app is in the background, wasting CPU and battery.
+- **Context**: Using `SharingStarted.Eagerly` or `Lazily` keeps upstream cold Flows active indefinitely even when the app is in the background, wasting CPU and battery.
 - **Decision**: Always convert cold flows to `StateFlow` using `.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InitialState)`.
 - **Consequences & Tradeoffs**:
   - *Pros*: Cancels upstream subscriptions 5 seconds after all UI collectors detach.
@@ -129,7 +129,7 @@
 ## ADR 013: Domain Use Cases with `operator fun invoke()`
 
 - **Status**: Accepted
-- **Context**: Letting ViewModels interact with God repositories directly leads to duplicate business rules (e.g. filtering logic, validation, currency conversions) across multiple screens.
+- **Context**: Letting ViewModels interact with God repositories directly leads to duplicate business rules across multiple screens.
 - **Decision**: Encapsulate distinct business actions into Single Responsibility Use Cases implementing `operator fun invoke()`.
 - **Consequences & Tradeoffs**:
   - *Pros*: 100% testable in isolation, callable as functions `getTransactionsUseCase()`, clean reuse.
@@ -151,7 +151,7 @@
 ## ADR 015: Model-View-Intent (MVI) for Complex Interactive Screens
 
 - **Status**: Accepted
-- **Context**: Complex screens with multiple concurrent user inputs (search, filter chips, delete gestures) suffer from race conditions when using multiple independent `MutableStateFlow` fields in ViewModels.
+- **Context**: Complex screens with multiple concurrent user inputs suffer from race conditions when using multiple independent `MutableStateFlow` fields in ViewModels.
 - **Decision**: Use the MVI pattern (`TransactionListIntent` → State Reducer → `TransactionListUiState`) for transactional screens, and Clean MVVM for read-heavy screens.
 - **Consequences & Tradeoffs**:
   - *Pros*: Single Source of Truth for screen state, 100% deterministic state transitions.
@@ -209,7 +209,7 @@
 ## ADR 020: Explicit 6-Path Network Error Taxonomy
 
 - **Status**: Accepted
-- **Context**: Catching generic `IOException` and displaying "Network Error" prevents users and engineers from knowing if the issue is an expired token (401), missing resource (404), server crash (500), DNS failure (offline), or slow link (timeout).
+- **Context**: Catching generic `IOException` and displaying "Network Error" prevents users and engineers from knowing the root failure path.
 - **Decision**: Classify all network failures into 6 distinct paths: `401 Unauthorized`, `404 Not Found`, `500 Server Error`, `Timeout`, `No Internet`, and `Malformed JSON`.
 - **Consequences & Tradeoffs**:
   - *Pros*: Clear UI error states (e.g. "Retry" vs "Log in again" vs "Check connection").
@@ -220,7 +220,7 @@
 ## ADR 021: Local Room Database as Single Source of Truth (SSOT)
 
 - **Status**: Accepted
-- **Context**: Displaying data directly from network responses causes blank screens when offline, inconsistent caching, and screen flickering on network refreshes.
+- **Context**: Displaying data directly from network responses causes blank screens when offline and inconsistent caching.
 - **Decision**: The UI observes ONLY the local Room database via reactive `Flow`. Remote API responses write strictly into Room.
 - **Consequences & Tradeoffs**:
   - *Pros*: 100% offline-first functionality, instant UI load times (<10ms), automatic UI updates when database changes.
@@ -231,8 +231,8 @@
 ## ADR 022: Adopt Jetpack Preferences DataStore over SharedPreferences
 
 - **Status**: Accepted
-- **Context**: `SharedPreferences` runs synchronous disk I/O on the UI thread causing frame drops/ANRs, lacks type safety, and crashes on unhandled `ClassCastException`.
-- **Decision**: Use `androidx.datastore:datastore-preferences` for lightweight key-value storage (currency, biometrics state, timestamps).
+- **Context**: `SharedPreferences` runs synchronous disk I/O on the UI thread causing frame drops/ANRs.
+- **Decision**: Use `androidx.datastore:datastore-preferences` for lightweight key-value storage.
 - **Consequences & Tradeoffs**:
   - *Pros*: 100% asynchronous Coroutines/Flow API, safe transactional writes, no UI thread blocking.
   - *Cons*: Cannot read values synchronously without suspending or collecting Flow.
@@ -243,7 +243,7 @@
 
 - **Status**: Accepted
 - **Context**: Calling `fallbackToDestructiveMigration()` in production deletes all user financial records and transactions during app updates.
-- **Decision**: Provide explicit `Migration(from, to)` objects (e.g. `MIGRATION_1_2`) and export Room schemas to `/schemas` for automated CI schema verification.
+- **Decision**: Provide explicit `Migration(from, to)` objects (e.g. `MIGRATION_1_2`) and export Room schemas to `/schemas`.
 - **Consequences & Tradeoffs**:
   - *Pros*: Zero user data loss across production database upgrades.
   - *Cons*: Requires writing manual SQL `ALTER TABLE` scripts for schema alterations.
@@ -253,8 +253,8 @@
 ## ADR 024: Type-Safe `@Serializable` Navigation-Compose Destinations
 
 - **Status**: Accepted
-- **Context**: Legacy Navigation-Compose used raw strings like `"transactions/{id}?filter={filter}"`, causing runtime crashes due to typos in argument keys and complex manual argument parsing.
-- **Decision**: Use Kotlinx `@Serializable` objects (`DashboardDestination`) and data classes (`TransactionDetailDestination(val transactionId: String)`).
+- **Context**: Legacy Navigation-Compose used raw strings causing runtime crashes from typos in argument keys.
+- **Decision**: Use Kotlinx `@Serializable` objects and data classes.
 - **Consequences & Tradeoffs**:
   - *Pros*: 100% compile-time type safety for arguments and routes; automated URL encoding/decoding.
   - *Cons*: Requires Kotlin Serialization plugin and Navigation-Compose 2.8+.
@@ -276,7 +276,40 @@
 
 - **Status**: Accepted
 - **Context**: Navigating to deep link destinations via manual Intent parsing in Activities scatters routing logic across multiple files.
-- **Decision**: Declare deep links directly on composable destinations using `navDeepLink<Destination>(basePath = ...)` and `android:autoVerify="true"` in the manifest.
+- **Decision**: Declare deep links directly on composable destinations using `navDeepLink<Destination>(basePath = ...)`.
 - **Consequences & Tradeoffs**:
   - *Pros*: Centralized routing, automated argument extraction from URL query/path parameters.
   - *Cons*: Requires matching URL path structure with destination properties.
+
+---
+
+## ADR 027: Prefer In-Memory Fakes over Mocking Frameworks in Architecture Tests
+
+- **Status**: Accepted
+- **Context**: Using Mockito/MockK to mock repositories creates brittle tests that break whenever internal method call order or signature changes (`verify(repo).fetch()`).
+- **Decision**: Write lightweight in-memory `Fake*Repository` implementations using `MutableStateFlow`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Tests execute realistic state mutations; refactor-proof; fast JVM execution without reflection.
+  - *Cons*: Requires maintaining fake classes in test source sets.
+
+---
+
+## ADR 028: Use Cash App Turbine with Virtual Time for Flow Testing
+
+- **Status**: Accepted
+- **Context**: Calling `first()` on a `StateFlow` only captures the initial item, missing subsequent transitions or causing tests to hang on cold flows.
+- **Decision**: Use `flow.test { awaitItem() }` combined with `StandardTestDispatcher.scheduler.advanceUntilIdle()`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Complete inspection of state stream emission sequences with zero timing flakiness.
+  - *Cons*: Requires learning Turbine syntax.
+
+---
+
+## ADR 029: Test Compose UI via Stateless Screen Contracts & Semantics
+
+- **Status**: Accepted
+- **Context**: Testing Compose screens with tight ViewModel coupling requires spinning up Android instrumentation runners or mocking ViewModels.
+- **Decision**: Because screens follow the 3-Layer Pattern (`*Route` -> `*Screen`), unit test the stateless `*Screen` functions and UI logic using pure JVM tests.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Sub-second test execution on JVM; tests pure UI rendering logic and form validation.
+  - *Cons*: Does not verify actual OpenGL pixels (reserved for screenshot testing).

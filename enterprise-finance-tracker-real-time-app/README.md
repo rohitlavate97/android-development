@@ -28,7 +28,7 @@ graph TD
     S06 --> S07["Stage 7: Resilient Networking (Retrofit, 401 Mutex, 6-path errors) ✅"]
     S07 --> S08["Stage 8: Offline-First Persistence (Room, DataStore) ✅"]
     S08 --> S09["Stage 9: Type-Safe Navigation & Deep Links ✅"]
-    S09 --> S10["Stage 10: Complete Test Pyramid (Turbine, Fakes, Compose UI)"]
+    S09 --> S10["Stage 10: Complete Test Pyramid (Turbine, Fakes, Compose UI) ✅"]
     S10 --> S11["Stage 11: Modularization (:app, :core:*, :feature:*-api/-impl)"]
     S11 --> S12["Stage 12: Production Quality (StrictMode, Profiler, Baseline Profiles)"]
     S12 --> S13["Stage 13: Release Engineering & Incident Response Playbook"]
@@ -42,6 +42,7 @@ graph TD
     style S07 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S08 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S09 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style S10 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---
@@ -51,16 +52,18 @@ graph TD
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — Architectural blueprint, layer definitions, data flow, and evolution plan.
 - **[DECISIONS.md](DECISIONS.md)** — Architecture Decision Records (ADRs) with rationale, alternatives, and tradeoffs.
 - **[DEBUGGING.md](DEBUGGING.md)** — Bug investigation logs, root cause analyses, and debugging challenges.
-- **[TESTING.md](TESTING.md)** — Testing strategy, test pyramid breakdown, and execution guidelines.
+- **[TESTING.md](TESTING.md)** — Testing strategy, test pyramid breakdown, Given-When-Then test specs, and execution guidelines.
 
 ---
 
 ## 📍 Current Status
 
-- **Current Stage**: **Stage 9 Completed — Type-Safe Navigation & Deep Linking**
+- **Current Stage**: **Stage 10 Completed — Complete Test Pyramid**
 - **Artifacts Built**:
-  - **Type-Safe Routes**: `@Serializable` destination objects (`LoginDestination`, `DashboardDestination`, `TransactionListDestination`) and classes (`TransactionDetailDestination(transactionId)`).
-  - **Nested Graphs**: `AuthGraph` and `MainGraph` with backstack popping (`popUpTo<AuthGraph> { inclusive = true }`).
-  - **Animated Transitions**: Smooth horizontal slide and cross-fade animations on screen entry/exit.
-  - **Production Deep Linking**: `navDeepLink<TransactionDetailDestination>` declared in Compose NavHost and `<intent-filter>` in `AndroidManifest.xml` for `https://financetracker.enterprise.com/transactions/{transactionId}`.
-  - **Automated Navigation Tests**: `NavigationDestinationSerializationTest` verifying route arguments and URL pattern matching.
+  - **Level 1 (Domain Unit Tests)**: `TransactionValidationTest`, `InvestmentPortfolioTest`, `UseCasesTest` with Fakes.
+  - **Level 2 (Data Boundary & Mappers)**: `DataMapperTest`, `EntityMapperTest`.
+  - **Level 3 (Networking & Failure Paths)**: `MockWebServerFailurePathsTest` (200, 401, 404, 500, Timeout, Malformed JSON).
+  - **Level 4 (Persistence & SSOT)**: `OfflineFirstExpenseRepositoryTest` verifying reactive invalidation.
+  - **Level 5 (ViewModels & Concurrency)**: `DashboardViewModelTest`, `TransactionListMviViewModelTest`, `TransactionFlowTest`, `SafeSuspendCallTest` with Turbine virtual time.
+  - **Level 6 (Navigation & UI Logic)**: `NavigationDestinationSerializationTest`, `StatelessScreenLogicTest`.
+  - **Level 7 (DI Verification)**: `AppModuleCheckTest`.

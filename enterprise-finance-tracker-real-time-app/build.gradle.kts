@@ -81,7 +81,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
 
-    // Navigation Compose (Type-Safe @Serializable Routes)
+    // Navigation Compose
     implementation(libs.androidx.navigation.compose)
 
     // Koin Dependency Injection
@@ -97,6 +97,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     testImplementation(libs.junit)
     testImplementation(libs.truth)
@@ -105,4 +106,5 @@ dependencies {
     testImplementation(libs.koin.test)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }
