@@ -346,3 +346,36 @@
 - **Consequences & Tradeoffs**:
   - *Pros*: Zero circular dependency risks; features can be built, tested, and deleted independently.
   - *Cons*: Shared feature components must be hoisted to `:core:designsystem` or `:core:model`.
+
+---
+
+## ADR 033: Baseline Profiles for Ahead-Of-Time (AOT) DEX Pre-Compilation
+
+- **Status**: Accepted
+- **Context**: JIT compilation during app launch and list scrolling causes frame drops (jank) and slow startup times on low-end and mid-range devices.
+- **Decision**: Generate Baseline Profiles covering Critical User Journeys (CUJ) (Startup, Login, Dashboard, Transaction List fling) using `androidx.profileinstaller`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Up to 30-40% faster cold startup time and smoother 60/120fps scrolling out of the box.
+  - *Cons*: Adds a baseline profile generation step in CI before Google Play release.
+
+---
+
+## ADR 034: Compose Compiler Stability via `@Immutable` UI Models
+
+- **Status**: Accepted
+- **Context**: The Compose Compiler treats standard `List<T>` parameters as *unstable*, forcing composable rows in `LazyColumn` to recompose even when items haven't changed.
+- **Decision**: Annotate all UI presentation state data classes with `@Immutable` or `@Stable`.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Enables smart recomposition skipping across the entire UI tree.
+  - *Cons*: Developers must ensure annotated classes do not contain mutable properties (`var`).
+
+---
+
+## ADR 035: StrictMode VM & Thread Policy Enforcement in Debug Builds
+
+- **Status**: Accepted
+- **Context**: Main thread disk reads (e.g. Room queries, file access) and unclosed SQLite cursors slip into production undetected, causing ANRs and memory leaks.
+- **Decision**: Initialize `StrictMode` in `EnterpriseFinanceApp.onCreate()` during debug builds.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Immediately detects regressions during daily development with Logcat penalties.
+  - *Cons*: Must be conditionally compiled out in release builds.

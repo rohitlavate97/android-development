@@ -16,6 +16,30 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 
 ---
 
+## 🔬 How to Read Android Heap Dumps & Fix Memory Leaks
+
+When investigating OutOfMemoryError (OOM) or Activity retention in Android Studio Profiler:
+
+1. **Capture Heap Dump**:
+   - Open Android Studio Profiler -> Select Device & Process -> Memory Track.
+   - Perform user action (e.g. rotate phone 5 times or enter/exit screen 10 times).
+   - Click **Dump Java Heap**.
+2. **Filter by Leaked Classes**:
+   - Filter by your package: `com.enterprise.financetracker`.
+   - Look for `MainActivity` or Screen classes. If there are >1 instances alive, you have an Activity leak.
+3. **Inspect the Shortest Path to GC Root**:
+   - Right-click the leaked instance -> **Go to Shortest Path to GC Roots (excluding weak references)**.
+   - Look for the strong reference chain:
+     - Is it a static companion object field?
+     - Is it an active `CoroutineScope` (e.g. `GlobalScope.launch`) holding a lambda with an implicit `this` reference?
+     - Is it an uncancelled `Flow.collect` or unregistered listener?
+4. **Apply Surgical Fix**:
+   - Use `viewLifecycleOwner.lifecycleScope` or `viewModelScope` instead of unbounded scopes.
+   - Clear static references in `onDestroy()`.
+   - Use WeakReference for non-lifecycle bound listeners.
+
+---
+
 ## 🎯 Stage 1 Debugging Challenges
 
 ### Challenge 1: The Account ID Transposition Bug
@@ -268,17 +292,43 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 ## 🎯 Stage 11 Debugging Challenges (Multi-Module Architecture)
 
 ### Challenge 22: Circular Module Dependency Cycle
-* **Symptom**: A developer in `:feature:transactions` adds a direct dependency `implementation(project(":feature:dashboard"))` to navigate to the dashboard, and a developer in `:feature:dashboard` adds `implementation(project(":feature:transactions"))`. Gradle build fails immediately with `Circular dependency between the following projects: :feature:transactions -> :feature:dashboard -> :feature:transactions`.
+* **Symptom**: A developer in `:feature:transactions` adds a direct dependency `implementation(project(":feature:dashboard"))`, and `:feature:dashboard` adds `implementation(project(":feature:transactions"))`. Build fails with circular dependency.
 * **Question for QA Engineer**: *Why are circular dependencies forbidden in Gradle, and how does the mediator pattern in `:app` solve it?*
 * 💡 **Hint 1**: Gradle builds DAG (Directed Acyclic Graphs). Cycles cannot be resolved topologically.
 * 💡 **Hint 2**: Read ADR 032 on feature module isolation.
-* ✅ **Solution**: Remove horizontal dependencies between feature modules. Keep feature modules completely isolated and orchestrate cross-feature navigation centrally inside `:app`.
+* ✅ **Solution**: Remove horizontal dependencies between feature modules. Keep feature modules isolated and orchestrate cross-feature navigation centrally inside `:app`.
 
 ---
 
 ### Challenge 23: Transitive Classpath Leakage via `api`
-* **Symptom**: Module `:core:database` exposes Room runtime via `api(libs.androidx.room.runtime)`. A developer in `:feature:dashboard` starts writing raw SQLite queries directly in the UI layer without using the Repository interface.
+* **Symptom**: Module `:core:database` exposes Room runtime via `api(libs.androidx.room.runtime)`. A developer in `:feature:dashboard` starts writing raw SQLite queries directly in the UI layer.
 * **Question for QA Engineer**: *Why is leaking low-level persistence libraries into UI feature modules dangerous for clean architecture?*
 * 💡 **Hint 1**: `api` puts dependencies on the compile classpath of all consumer modules.
 * 💡 **Hint 2**: Read ADR 031 on `api` vs `implementation`.
-* ✅ **Solution**: Change `api` to `implementation(libs.androidx.room.runtime)` in `:core:database`. This hides Room annotations and classes from feature modules at compile-time.
+* ✅ **Solution**: Change `api` to `implementation(libs.androidx.room.runtime)` in `:core:database`.
+
+---
+
+## 🎯 Stage 12 Debugging Challenges (Production Performance & Profiling)
+
+### Challenge 24: Unstable Collection Recomposition Storm
+* **Symptom**: In `DashboardScreen`, whenever a stock ticker price updates in `HoldingCard`, all 50 transaction rows in `TransactionCard` recompose simultaneously, causing frame drops down to 35 FPS.
+* **Question for QA Engineer**: *Why does the Compose compiler treat `List<TransactionUiModel>` as unstable by default, and how does `@Immutable` fix this?*
+* 💡 **Hint 1**: Standard Kotlin `List<T>` is an interface; the underlying runtime instance could be a mutable `ArrayList`.
+* 💡 **Hint 2**: Read ADR 034 on Compose stability annotations.
+* ✅ **Solution**: Annotate `TransactionUiModel` and `HoldingUiModel` with `@Immutable`. Compose compiler will mark them as stable and skip recompositions if their fields haven't changed.
+
+---
+
+### Challenge 25: Static Activity Leak in Singleton
+* **Symptom**: After rotating the device 10 times, the app crashes with `OutOfMemoryError`. Heap dump shows 10 instances of `MainActivity` retained in memory.
+* **Code Fragment**:
+  ```kotlin
+  object SecurityNotificationHelper {
+      var activityContext: Context? = null // Holds Activity context!
+  }
+  ```
+* **Question for QA Engineer**: *Why does holding an Activity reference in a Singleton cause a massive memory leak upon screen rotation?*
+* 💡 **Hint 1**: The OS creates a new Activity on rotation and calls `onDestroy()` on the previous one.
+* 💡 **Hint 2**: GC Roots: A static field is never garbage collected during the process lifetime.
+* ✅ **Solution**: Never store Activity context in singletons. Pass `applicationContext` or inject dependencies via Koin.

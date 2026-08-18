@@ -30,7 +30,7 @@ graph TD
     S08 --> S09["Stage 9: Type-Safe Navigation & Deep Links ✅"]
     S09 --> S10["Stage 10: Complete Test Pyramid (Turbine, Fakes, Compose UI) ✅"]
     S10 --> S11["Stage 11: Modularization (:app, :core:*, :feature:*-api/-impl) ✅"]
-    S11 --> S12["Stage 12: Production Quality (StrictMode, Profiler, Baseline Profiles)"]
+    S11 --> S12["Stage 12: Production Quality (StrictMode, Profiler, Baseline Profiles) ✅"]
     S12 --> S13["Stage 13: Release Engineering & Incident Response Playbook"]
 
     style S01 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
@@ -44,78 +44,26 @@ graph TD
     style S09 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S10 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S11 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
-```
-
----
-
-## 🏛️ Multi-Module Dependency Graph
-
-```mermaid
-graph TD
-    App[":app"]
-    
-    subgraph FeatureModules ["Feature Modules (Isolated)"]
-        FD[":feature:dashboard"]
-        FT[":feature:transactions"]
-        FA[":feature:analytics"]
-    end
-    
-    subgraph CoreModules ["Core Modules (Shared Foundation)"]
-        DS[":core:designsystem"]
-        CDB[":core:database"]
-        CNET[":core:network"]
-        CMOD[":core:model"]
-        CCOM[":core:common"]
-    end
-
-    App --> FD
-    App --> FT
-    App --> FA
-    App --> DS
-    App --> CDB
-    App --> CNET
-    App --> CMOD
-    App --> CCOM
-
-    FD --> DS
-    FD --> CMOD
-    FD --> CCOM
-    FD --> CDB
-
-    FT --> DS
-    FT --> CMOD
-    FT --> CCOM
-    FT --> CDB
-
-    FA --> DS
-    FA --> CMOD
-    FA --> CCOM
-    FA --> CDB
-
-    DS --> CMOD
-
-    CDB --> CMOD
-    CDB --> CCOM
-
-    CNET --> CMOD
-    CNET --> CCOM
+    style S12 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---
 
 ## 📚 Living Project Documentation
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — Architectural blueprint, module topology, `api` vs `implementation` encapsulation, and build optimization mechanics.
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — Architectural blueprint, performance optimization lifecycle, Baseline Profiles AOT compilation, and Compose compiler stability.
 - **[DECISIONS.md](DECISIONS.md)** — Architecture Decision Records (ADRs) with rationale, alternatives, and tradeoffs.
-- **[DEBUGGING.md](DEBUGGING.md)** — Bug investigation logs, root cause analyses, and debugging challenges.
-- **[TESTING.md](TESTING.md)** — Testing strategy, test pyramid breakdown, and parallel multi-module execution guidelines.
+- **[DEBUGGING.md](DEBUGGING.md)** — Bug investigation logs, Android Profiler & Heap Dump inspection protocols, and debugging challenges.
+- **[TESTING.md](TESTING.md)** — Testing strategy, test pyramid breakdown, and Macrobenchmark performance scripts.
 
 ---
 
 ## 📍 Current Status
 
-- **Current Stage**: **Stage 11 Completed — Gradle & Multi-Module Architecture**
+- **Current Stage**: **Stage 12 Completed — Production Quality, Profiling & Baseline Profiles**
 - **Artifacts Built**:
-  - **Module Topology**: Refactored monolithic codebase into 9 decoupled Gradle modules (`:app`, `:core:common`, `:core:model`, `:core:database`, `:core:network`, `:core:designsystem`, `:feature:dashboard`, `:feature:transactions`, `:feature:analytics`).
-  - **Encapsulation Rules**: Strict `api` vs `implementation` boundaries; domain entities exposed via `api(project(":core:model"))`, network DTOs and database internals isolated via `implementation`.
-  - **Compile Avoidance**: Feature modules are completely isolated from each other (e.g. editing `:feature:dashboard` never triggers recompilation of `:feature:transactions`).
+  - **StrictMode Engine**: Strict ThreadPolicy & VmPolicy detecting disk I/O, network calls on Main, SQLite cursor leaks, and Activity leaks.
+  - **Startup TTFD Tracker**: `StartupPerformanceTracker` measuring Time-To-Full-Display and dispatching `reportFullyDrawn()`.
+  - **Baseline Profiles Contract**: `BaselineProfileJourneys` defining ahead-of-time (AOT) pre-compilation rules for startup and list scrolling.
+  - **Compose Compiler Stability**: Annotated all UI state models (`TransactionUiModel`, `CategoryUiModel`, `PortfolioUiModel`) with `@Immutable` to skip unnecessary recompositions.
+  - **Performance Unit Tests**: Verified UI model stability contracts and startup measurement logic.

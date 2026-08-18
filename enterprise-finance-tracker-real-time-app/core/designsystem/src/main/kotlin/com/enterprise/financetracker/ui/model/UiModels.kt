@@ -1,12 +1,14 @@
 package com.enterprise.financetracker.ui.model
 
-import com.enterprise.financetracker.domain.model.*
+import androidx.compose.runtime.Immutable
 
 /**
- * UI-Specific Presentation Models.
- * Contains pre-formatted display strings, localized symbols, and visual badges.
- * (Phase 5 Concept 7 & UI Model Discipline)
+ * UI State Models annotated with @Immutable for Compose Compiler Stability.
+ * Enables the Compose runtime to skip recompositions when inputs are structurally equal.
+ * (Phase 12 Concept 3 & ADR 034)
  */
+
+@Immutable
 data class CategoryUiModel(
     val id: String,
     val name: String,
@@ -14,6 +16,7 @@ data class CategoryUiModel(
     val colorHex: String
 )
 
+@Immutable
 data class TransactionUiModel(
     val id: String,
     val title: String,
@@ -23,24 +26,24 @@ data class TransactionUiModel(
     val category: CategoryUiModel,
     val accountLabel: String,
     val isRecurring: Boolean,
-    val note: String?
+    val note: String? = null
 )
 
+@Immutable
 data class HoldingUiModel(
     val ticker: String,
     val name: String,
-    val sharesText: String,
-    val formattedMarketValue: String,
-    val returnPercentageText: String,
-    val isGain: Boolean,
-    val allocationPercentageText: String,
-    val rawAllocation: Float
+    val formattedValue: String,
+    val formattedReturn: String,
+    val isPositiveReturn: Boolean,
+    val allocationPercentageFormatted: String
 )
 
+@Immutable
 data class PortfolioUiModel(
     val name: String,
     val formattedNetWorth: String,
-    val formattedCash: String,
+    val formattedLiquidCash: String,
     val formattedInvested: String,
     val holdings: List<HoldingUiModel>
 )

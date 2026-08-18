@@ -64,6 +64,9 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
 
+    // Performance & Baseline Profiles
+    implementation(libs.androidx.profileinstaller)
+
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
