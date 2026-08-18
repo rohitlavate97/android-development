@@ -152,3 +152,29 @@ When diagnosing defects in Android applications, follow the **4-Step Investigati
 * 💡 **Hint 1**: Were DTOs passed directly into the Composable?
 * 💡 **Hint 2**: Read ADR 014 on defensive boundary mappers.
 * ✅ **Solution**: Never pass DTOs directly to UI. Convert DTOs in `data/mapper/` with defensive fallbacks (e.g. `iconName ?: "category"`).
+
+---
+
+## 🎯 Stage 6 Debugging Challenges (Dependency Injection)
+
+### Challenge 12: The `NoDefinitionFoundException` Runtime Crash
+* **Symptom**: App crashes on startup with `NoDefinitionFoundException: No definition found for class 'com.enterprise.financetracker.domain.repository.ExpenseRepository'`.
+* **Question for QA Engineer**: *Why does Koin throw this exception at runtime instead of failing at compile time, and how do we prevent it before shipping?*
+* 💡 **Hint 1**: Koin is a runtime dependency injection DSL, not a compile-time code generator like Hilt.
+* 💡 **Hint 2**: Check if `singleOf(::ExpenseRepositoryImpl)` is bound to its interface with `bind ExpenseRepository::class`.
+* ✅ **Solution**: Use `singleOf(::ExpenseRepositoryImpl) bind ExpenseRepository::class` and write a CI unit test calling `AppModuleCheckTest` (`checkModules()`).
+
+---
+
+### Challenge 13: Scope Lifetime Mismatch (State Leaking Singleton)
+* **Symptom**: User A logs out and User B logs in on the same device. User B sees User A's active filter query in the search bar.
+* **Code Fragment**:
+  ```kotlin
+  val uiModule = module {
+      single { TransactionListMviViewModel(...) } // Declared as Singleton!
+  }
+  ```
+* **Question for QA Engineer**: *Why is declaring a ViewModel as `single` catastrophic for multi-user security and screen state?*
+* 💡 **Hint 1**: What is the lifespan of a `single` definition vs a `viewModelOf` definition?
+* 💡 **Hint 2**: Read ADR 017 on scope lifetimes.
+* ✅ **Solution**: Change `single` to `viewModelOf(::TransactionListMviViewModel)` so the ViewModel lifecycle is scoped to the screen composable and destroyed when dismissed.

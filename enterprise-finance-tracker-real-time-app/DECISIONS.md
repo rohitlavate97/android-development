@@ -156,3 +156,28 @@
 - **Consequences & Tradeoffs**:
   - *Pros*: Single Source of Truth for screen state, 100% deterministic state transitions.
   - *Cons*: Requires defining Intent sealed hierarchies.
+
+---
+
+## ADR 016: Adopt Koin Pure Kotlin DSL for Dependency Injection
+
+- **Status**: Accepted
+- **Context**: Manual constructor injection in `MainActivity` becomes unmaintainable as dependencies scale across multi-layered architecture. Using Dagger/Hilt requires heavy KSP / annotation processor build steps.
+- **Decision**: Adopt Koin with Kotlin DSL constructor injection (`singleOf`, `factoryOf`, `viewModelOf`).
+- **Consequences & Tradeoffs**:
+  - *Pros*: Instant build times (0 codegen overhead), clean Kotlin DSL, portable to Kotlin Multiplatform (KMP).
+  - *Cons*: Graph resolution happens at runtime; mitigated by running automated `AppModuleCheckTest` in CI.
+
+---
+
+## ADR 017: Explicit Scope Lifetimes: Singleton vs Factory vs ViewModelScoped
+
+- **Status**: Accepted
+- **Context**: Creating singletons for stateful UseCases can retain stale memory, while creating new repository instances per screen breaks in-memory caching.
+- **Decision**: Enforce strict scoping:
+  1. `single` / `@Singleton`: Repositories, DataSources, DispatcherProvider, Database.
+  2. `factory`: Stateless Domain UseCases.
+  3. `viewModelOf`: Screen state ViewModels tied to Composable lifecycle.
+- **Consequences & Tradeoffs**:
+  - *Pros*: Optimal memory usage and deterministic lifecycles.
+  - *Cons*: Requires deliberate choice of `singleOf` vs `factoryOf` during module registration.

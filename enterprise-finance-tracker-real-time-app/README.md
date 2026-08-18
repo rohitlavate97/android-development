@@ -24,7 +24,7 @@ graph TD
     S02 --> S03["Stage 3: Jetpack Compose UI (3-Layer Screens) ✅"]
     S03 --> S04["Stage 4: Coroutines, Flow & Concurrency Engine ✅"]
     S04 --> S05["Stage 5: Clean Architecture (UDF, UseCases, SSOT) ✅"]
-    S05 --> S06["Stage 6: Dependency Injection (Koin & Hilt)"]
+    S05 --> S06["Stage 6: Dependency Injection (Koin & Hilt) ✅"]
     S06 --> S07["Stage 7: Resilient Networking (Retrofit, 401 Mutex, 6-path errors)"]
     S07 --> S08["Stage 8: Offline-First Persistence (Room, DataStore)"]
     S08 --> S09["Stage 9: Type-Safe Navigation & Deep Links"]
@@ -38,6 +38,7 @@ graph TD
     style S03 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S04 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     style S05 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style S06 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---
@@ -53,12 +54,9 @@ graph TD
 
 ## 📍 Current Status
 
-- **Current Stage**: **Stage 5 Completed — Clean Architecture & Unidirectional Data Flow (UDF)**
+- **Current Stage**: **Stage 6 Completed — Dependency Injection (Koin Modules & Lifetimes)**
 - **Artifacts Built**:
-  - **Domain Use Cases**: `GetTransactionsUseCase`, `GetTransactionDetailUseCase`, `AddTransactionUseCase`, `DeleteTransactionUseCase`, `GetPortfolioSummaryUseCase`, `FilterTransactionsUseCase` with `operator fun invoke()`.
-  - **Data Layer Boundaries**: `DataTransferObjects` (DTOs), defensive `DataMappers`, `TransactionLocalDataSource`, `ExpenseRepositoryImpl`.
-  - **Presentation Models & Mappers**: `UiModels` (pre-formatted strings), `UiMappers` converting domain entities to UI models.
-  - **Dual Architectural Patterns**:
-    - **Dashboard**: Clean MVVM with `StateFlow<DashboardUiState>`.
-    - **Transactions**: Full MVI (Model-View-Intent) state machine with `TransactionListIntent` and `TransactionListMviViewModel`.
-  - **Unit Test Suite**: `UseCasesTest`, `DataMapperTest`, `TransactionListMviViewModelTest`.
+  - **Koin DI Modules**: `coreModule` (`DispatcherProvider`), `dataModule` (`TransactionLocalDataSource`, `ExpenseRepositoryImpl`), `domainModule` (Use Cases with `factoryOf`), `uiModule` (ViewModels with `viewModelOf`), and `appModules`.
+  - **Application Container**: `EnterpriseFinanceApp` starts Koin with `androidLogger()` and `androidContext()`.
+  - **Compose UI Injection**: `MainActivity` and routes inject ViewModels via `koinViewModel()` and `inject()`.
+  - **DI Graph Unit Test Suite**: `AppModuleCheckTest` verifying complete graph resolution and scope lifetimes (`single` vs `factory`).

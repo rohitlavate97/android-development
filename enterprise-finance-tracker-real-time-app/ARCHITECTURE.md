@@ -2,7 +2,7 @@
 
 ## 1. High-Level Target Architecture
 
-The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)**:
+The application implements Google's recommended **Clean Architecture with Unidirectional Data Flow (UDF)** powered by Dependency Injection:
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -12,41 +12,57 @@ The application implements Google's recommended **Clean Architecture with Unidir
 │   ViewModel (MVI State Machine / MVVM State Holder)    │
 │              (StateFlow<UiState> + UI Intents)         │
 └──────────────────────────┬─────────────────────────────┘
-                           │ (Inward Dependency: calls UseCases)
+                           │ (Injected via koinViewModel())
 ┌──────────────────────────▼─────────────────────────────┐
 │                      Domain Layer                      │
-│        Use Cases (operator fun invoke())               │
+│   Use Cases (factoryOf(::UseCase), invoke())           │
 │   Domain Entities & Value Classes (Pure Kotlin)        │
-│          Repository Interfaces (Contracts)             │
+│   Repository Interfaces (Contracts)                    │
 └──────────────────────────▲─────────────────────────────┘
-                           │ (Dependency Inversion: Implemented by Data)
+                           │ (singleOf(::RepositoryImpl) bind Repository::class)
 ┌──────────────────────────┴─────────────────────────────┐
 │                       Data Layer                       │
-│        Repository Implementations (SSOT)               │
-│      Local DataSource       │      Remote DataSource   │
-│   (Room SQLite + DataStore) │    (Retrofit + OkHttp)   │
+│   Repository Implementations (SSOT)                    │
+│   Local DataSource          │      Remote DataSource   │
+│   (InMemory / Room DB)      │    (Retrofit + OkHttp)   │
 └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Why Each Layer Exists
+## 2. Dependency Injection Graph & Scope Lifetimes
 
-| Layer | Responsibility | Why It Exists | What It Must NOT Do |
-|---|---|---|---|
-| **UI (Compose)** | Renders UI based on immutable state. Emits user interaction events (Intents). | Pure presentation. Decoupled from lifecycle and business logic. | Never perform business math, format currencies manually, or query repositories directly. |
-| **ViewModel** | State Holder & Reducer. Converts Domain streams to UI State models. | Survives configuration changes and acts as a bridge between UI and Domain. | Never reference `Context`, `View`, or `Activity`. Never contain SQLite/HTTP code. |
-| **UseCase (Domain)** | Single executable business action (`operator fun invoke()`). | Reusable, self-contained business logic testable in pure JVM without mocking frameworks. | Never import `android.*` SDK packages. Never depend on Data implementations. |
-| **Repository (Data)** | Single Source of Truth (SSOT). Coordinates local and remote data sources. | Hides where data comes from (database vs network vs cache) from the domain layer. | Never expose raw DTOs or database entities to the Domain. |
-| **DataSource (Data)** | Low-level data I/O (Room SQLite queries, Retrofit HTTP requests). | Direct database/network driver interaction. | Never implement domain business logic or cross-entity validations. |
+The DI container manages the lifecycle of components across 3 distinct scopes:
+
+```mermaid
+graph TD
+    App["Application Scope (single / @Singleton)"]
+    App --> DP["DispatcherProvider (StandardDispatcherProvider)"]
+    App --> LDS["TransactionLocalDataSource (InMemoryTransactionLocalDataSource)"]
+    App --> ER["ExpenseRepository (ExpenseRepositoryImpl)"]
+    App --> PR["PortfolioRepository (PortfolioRepositoryImpl)"]
+
+    Sub["Execution Scope (factory / Transient)"]
+    Sub --> UC1["GetTransactionsUseCase"]
+    Sub --> UC2["GetTransactionDetailUseCase"]
+    Sub --> UC3["AddTransactionUseCase"]
+    Sub --> UC4["DeleteTransactionUseCase"]
+    Sub --> UC5["GetPortfolioSummaryUseCase"]
+    Sub --> UC6["FilterTransactionsUseCase"]
+
+    Screen["Screen Lifecycle Scope (viewModelOf / @ViewModelScoped)"]
+    Screen --> DVM["DashboardViewModel"]
+    Screen --> TVM["TransactionListMviViewModel"]
+```
 
 ---
 
-## 3. Data Model Taxonomy & Boundary Discipline
+## 3. Dependency Injection Framework Tradeoffs: Hilt vs Koin
 
-To prevent architectural leaks, models are strictly separated:
-
-1. **Domain Models (`DomainModels.kt`)**: Pure Kotlin representations containing core business logic and invariant validation. Uses `@JvmInline value class` for identifiers.
-2. **Data Transfer Objects (`*Dto.kt`)**: Match remote backend JSON schemas. All fields nullable to defensively withstand malformed server payloads.
-3. **Database Entities (`*Entity.kt`)**: Room SQLite table definitions optimized for relational storage and foreign keys.
-4. **UI State Models (`*UiState.kt` / `*UiModel.kt`)**: Immutable sealed hierarchies and pre-formatted strings representing the 4 standard visual states (`Loading`, `Content`, `Empty`, `Error`).
+| Dimension | Hilt (Dagger) | Koin (Kotlin DSL) | Our Choice in Stage 6 |
+|---|---|---|---|
+| **Mechanism** | Compile-time code generation via KSP / Java annotation processor. | Runtime Service Locator with lightweight Kotlin DSL reflection. | **Koin** (Pure Kotlin, zero annotation processing build overhead). |
+| **Build Speed** | Slower (adds KSP / kapt compile steps). | **Fast** (zero code generation during builds). | Koin provides instant incremental builds. |
+| **Compile-Time Safety** | 100% compile-time graph verification. | Runtime verification (requires `checkModules()` test suite). | We write automated `AppModuleCheckTest` to ensure 100% graph safety. |
+| **Kotlin Multiplatform (KMP)**| Android/JVM only. | **First-class KMP support** (Android, iOS, Desktop, Web). | Koin makes the Domain and Data layers portable to iOS. |
+| **Boilerplate** | High (`@Inject`, `@Module`, `@InstallIn`, `@Binds`, `@Provides`). | **Minimal** (`singleOf`, `viewModelOf`, `factoryOf`). | Concise and clean. |

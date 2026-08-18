@@ -3,11 +3,15 @@ package com.enterprise.financetracker
 import android.app.Application
 import android.os.StrictMode
 import android.util.Log
+import com.enterprise.financetracker.di.appModules
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
 
 /**
  * Enterprise Application Root Class.
  * Responsible for process-level initialization, StrictMode policy configuration,
- * and global exception handler hooks. (Phase 3 Concept 2 & Stage 2)
+ * and Koin Dependency Injection graph initialization. (Phase 6 Concept 7 & Stage 6)
  */
 class EnterpriseFinanceApp : Application() {
 
@@ -22,6 +26,8 @@ class EnterpriseFinanceApp : Application() {
         Log.i(TAG, "Application onCreate: Initializing process ${android.os.Process.myPid()}")
 
         setupStrictMode()
+        setupDependencyInjection()
+
         isAppInitialized = true
         Log.i(TAG, "Application initialization complete.")
     }
@@ -44,6 +50,15 @@ class EnterpriseFinanceApp : Application() {
                     .penaltyLog()
                     .build()
             )
+        }
+    }
+
+    private fun setupDependencyInjection() {
+        Log.d(TAG, "Starting Koin Dependency Injection container")
+        startKoin {
+            if (BuildConfig.DEBUG) androidLogger()
+            androidContext(this@EnterpriseFinanceApp)
+            modules(appModules)
         }
     }
 }
