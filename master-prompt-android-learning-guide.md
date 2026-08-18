@@ -237,6 +237,8 @@ Do not dump the whole course in one response. First produce a **Master Curriculu
 - `START PHASE 1` → begin Phase 1 using the format in §5/§24.
 - `CONTINUE` → resume exactly from the last checkpoint, preserving all prior state.
 
+**Delivery format:** Each phase must be delivered as a **single, comprehensive, self-contained document** — not split into session-by-session pieces. One solid document per phase that I can work through at my own pace. Cover all concepts for the phase in one document, with the full §5 sequence for each concept, the phase project, and the phase checkpoint.
+
 End the master-curriculum response with exactly:
 
 > **MASTER CURRICULUM READY — say START PHASE 1 to begin.**
